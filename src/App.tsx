@@ -1,0 +1,234 @@
+import { useEffect, useMemo, useState } from 'react'
+import { AchievementsScreen } from './components/AchievementsScreen.tsx'
+import { AchievementToast } from './components/AchievementToast.tsx'
+import { GameScreen } from './components/GameScreen.tsx'
+import { Header } from './components/Header.tsx'
+import { HomeScreen } from './components/HomeScreen.tsx'
+import { HowToPlayScreen } from './components/HowToPlayScreen.tsx'
+import { ResultScreen } from './components/ResultScreen.tsx'
+import { SettingsScreen } from './components/SettingsScreen.tsx'
+import { StatsScreen } from './components/StatsScreen.tsx'
+import { bestSolveTimeMs, formatDateLabel, getLocalDateString } from './game/daily.ts'
+import { expireClock, lockIn, scoreForValue, selectOperator, selectTile, undo } from './game/engine.ts'
+import { ACHIEVEMENTS } from './game/achievements.ts'
+import type { Operator } from './game/types.ts'
+import { useAchievements } from './hooks/useAchievements.ts'
+import { useClassicClockSetting } from './hooks/useClassicClockSetting.ts'
+import { useCurrentDailyGame } from './hooks/useCurrentDailyGame.ts'
+import { useCurrentGame } from './hooks/useCurrentGame.ts'
+import { useDailyChallenge } from './hooks/useDailyChallenge.ts'
+import { useDailyTimer } from './hooks/useDailyTimer.ts'
+import { useGameStats } from './hooks/useGameStats.ts'
+import { useHardMode } from './hooks/useHardMode.ts'
+import { useShowHomeScreen } from './hooks/useShowHomeScreen.ts'
+import { useSoundSetting } from './hooks/useSoundSetting.ts'
+import { useTheme } from './hooks/useTheme.ts'
+import { playSound } from './utils/sound.ts'
+import { resetAllData } from './utils/resetData.ts'
+import { APP_VERSION } from './version.ts'
+
+type ReturnTarget = 'home' | 'game' | 'settings'
+
+export function App() {
+  const today = useMemo(() => getLocalDateString(), [])
+
+  const freePlay = useCurrentGame()
+  const daily = useCurrentDailyGame(today)
+  const dailyChallenge = useDailyChallenge(today)
+  const gameStats = useGameStats()
+  const { hardMode, toggleHardMode } = useHardMode()
+  const { theme, toggleTheme } = useTheme()
+  const { muted, toggleMuted } = useSoundSetting()
+  const { showHomeScreen } = useShowHomeScreen()
+  const { classicClock, toggleClassicClock } = useClassicClockSetting()
+
+  const dailyHasStarted = daily.state.selectedId !== null || daily.state.history.length > 0
+  const dailyIsLocked = daily.state.status === 'locked'
+  const dailyTimer = useDailyTimer(dailyHasStarted, dailyIsLocked)
+
+  const fastestDailySolveMs = bestSolveTimeMs(dailyChallenge.history)
+  const achievements = useAchievements(gameStats.stats, dailyChallenge.streak, fastestDailySolveMs)
+
+  const [isHomeOpen, setIsHomeOpen] = useState(showHomeScreen)
+  const [isDailyOpen, setIsDailyOpen] = useState(false)
+  const [isStatsOpen, setIsStatsOpen] = useState(false)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false)
+  const [isAchievementsOpen, setIsAchievementsOpen] = useState(false)
+  const [returnTo, setReturnTo] = useState<ReturnTarget>('game')
+
+  const activeState = isDailyOpen ? daily.state : freePlay.state
+  const activeSetState = isDailyOpen ? daily.setState : freePlay.setState
+
+  // Record a completed free-play game exactly once per game, guarded by the
+  // hook's own hasRecorded flag so a page refresh right after finishing
+  // can't double-count it.
+  useEffect(() => {
+    if (freePlay.state.status === 'locked' && !freePlay.hasRecorded) {
+      const score = scoreForValue(freePlay.state.target, freePlay.state.finalValue)
+      gameStats.recordCompletedGame(score)
+      freePlay.setHasRecorded(true)
+      playSound(score === 10 ? 'win' : score > 0 ? 'close' : 'miss')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [freePlay.state.status, freePlay.hasRecorded])
+
+  // Record today's daily result exactly once, guarded by todayResult already
+  // being set — there's only one daily attempt per day.
+  useEffect(() => {
+    if (daily.state.status === 'locked' && dailyChallenge.todayResult === null) {
+      const score = scoreForValue(daily.state.target, daily.state.finalValue)
+      gameStats.recordCompletedGame(score)
+      dailyChallenge.recordDailyResult({
+        target: daily.state.target,
+        finalValue: daily.state.finalValue,
+        score,
+        stepCount: daily.state.history.length,
+        solveTimeMs: dailyTimer.elapsedMs,
+      })
+      playSound(score === 10 ? 'win' : score > 0 ? 'close' : 'miss')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [daily.state.status, dailyChallenge.todayResult])
+
+  function closeAllScreens() {
+    setIsHomeOpen(false)
+    setIsStatsOpen(false)
+    setIsSettingsOpen(false)
+    setIsHowToPlayOpen(false)
+  }
+
+  function openHome() {
+    closeAllScreens()
+    setIsHomeOpen(true)
+  }
+
+  function openStats() {
+    setReturnTo(isHomeOpen ? 'home' : 'game')
+    closeAllScreens()
+    setIsStatsOpen(true)
+  }
+
+  function openSettings() {
+    setReturnTo(isHomeOpen ? 'home' : 'game')
+    closeAllScreens()
+    setIsSettingsOpen(true)
+  }
+
+  function openHowToPlayFrom(from: ReturnTarget) {
+    setReturnTo(from)
+    closeAllScreens()
+    setIsHowToPlayOpen(true)
+  }
+
+  function closeToReturnPoint() {
+    closeAllScreens()
+    if (returnTo === 'home') setIsHomeOpen(true)
+    else if (returnTo === 'settings') setIsSettingsOpen(true)
+  }
+
+  function startFreePlay() {
+    closeAllScreens()
+    setIsDailyOpen(false)
+    if (freePlay.state.status === 'locked') freePlay.restart()
+  }
+
+  function startDaily() {
+    if (dailyChallenge.todayResult !== null) return
+    closeAllScreens()
+    setIsDailyOpen(true)
+  }
+
+  const isResultShowing = activeState.status === 'locked' && !isHomeOpen && !isStatsOpen && !isSettingsOpen && !isHowToPlayOpen
+  const showAchievementToast = achievements.newlyUnlocked.length > 0 && !isAchievementsOpen && !isResultShowing
+
+  return (
+    <div className="app">
+      {isHomeOpen ? (
+        <HomeScreen
+          todayResult={dailyChallenge.todayResult}
+          dailyStreak={dailyChallenge.streak}
+          stats={gameStats.stats}
+          unlockedCount={Object.keys(achievements.unlockedAt).length}
+          totalAchievementCount={ACHIEVEMENTS.length}
+          onPlayFreePlay={startFreePlay}
+          onPlayDaily={startDaily}
+          onOpenStats={openStats}
+          onOpenAchievements={() => setIsAchievementsOpen(true)}
+          onOpenHowToPlay={() => openHowToPlayFrom('home')}
+          onOpenSettings={openSettings}
+        />
+      ) : isStatsOpen ? (
+        <StatsScreen
+          stats={gameStats.stats}
+          dailyStreak={dailyChallenge.streak}
+          dailyHistory={dailyChallenge.history}
+          onClose={closeToReturnPoint}
+        />
+      ) : isSettingsOpen ? (
+        <SettingsScreen
+          muted={muted}
+          onToggleMuted={toggleMuted}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          hardMode={hardMode}
+          onToggleHardMode={toggleHardMode}
+          classicClock={classicClock}
+          onToggleClassicClock={toggleClassicClock}
+          onOpenHowToPlay={() => openHowToPlayFrom('settings')}
+          onResetData={resetAllData}
+          onClose={closeToReturnPoint}
+          version={APP_VERSION}
+        />
+      ) : isHowToPlayOpen ? (
+        <HowToPlayScreen onClose={closeToReturnPoint} />
+      ) : (
+        <>
+          <Header
+            onOpenHome={openHome}
+            onOpenAchievements={() => setIsAchievementsOpen(true)}
+            onOpenStats={openStats}
+            onOpenSettings={openSettings}
+            hasNewAchievement={achievements.newlyUnlocked.length > 0}
+          />
+          <GameScreen
+            state={activeState}
+            resetSignal={isDailyOpen ? today : freePlay.gameId}
+            hardMode={hardMode}
+            classicClockEnabled={classicClock}
+            elapsedMs={isDailyOpen ? dailyTimer.elapsedMs : undefined}
+            onSelectTile={id => activeSetState(selectTile(activeState, id))}
+            onSelectOperator={(op: Operator) => activeSetState(selectOperator(activeState, op))}
+            onUndo={() => activeSetState(undo(activeState))}
+            onLockIn={() => {
+              if (activeState.selectedId !== null) activeSetState(lockIn(activeState, activeState.selectedId))
+            }}
+            onExpireClock={() => activeSetState(expireClock(activeState))}
+          />
+          {isResultShowing && (
+            <ResultScreen
+              mode={isDailyOpen ? 'daily' : 'free'}
+              target={activeState.target}
+              finalValue={activeState.finalValue}
+              score={scoreForValue(activeState.target, activeState.finalValue)}
+              stepCount={activeState.history.length}
+              elapsedMs={isDailyOpen ? dailyTimer.elapsedMs : 0}
+              dateLabel={isDailyOpen ? formatDateLabel(today) : undefined}
+              dailyStreakCount={isDailyOpen ? dailyChallenge.streak.count : undefined}
+              onPlayAgain={isDailyOpen ? undefined : startFreePlay}
+              onClose={openHome}
+            />
+          )}
+        </>
+      )}
+
+      {isAchievementsOpen && (
+        <AchievementsScreen unlockedAt={achievements.unlockedAt} onClose={() => setIsAchievementsOpen(false)} />
+      )}
+
+      {showAchievementToast && (
+        <AchievementToast achievement={achievements.newlyUnlocked[0]} onDismiss={achievements.dismissNewlyUnlocked} />
+      )}
+    </div>
+  )
+}
