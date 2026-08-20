@@ -7,6 +7,9 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     globals: true,
-    exclude: ['**/node_modules/**'],
+    // worker/ has its own vitest-pool-workers setup (cloudflare:test
+    // bindings this jsdom env can't resolve) and is tested separately via
+    // `cd worker && npm test`.
+    exclude: ['**/node_modules/**', 'worker/**'],
   },
 })

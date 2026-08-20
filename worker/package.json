@@ -1,0 +1,19 @@
+{
+  "name": "anniethmetic-leaderboard-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "migrate:local": "wrangler d1 execute anniethmetic-leaderboard --local --file=./schema.sql",
+    "migrate:remote": "wrangler d1 execute anniethmetic-leaderboard --remote --file=./schema.sql",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.18.8",
+    "@cloudflare/workers-types": "^5.20260714.1",
+    "typescript": "~6.0.2",
+    "vitest": "^4.1.10",
+    "wrangler": "^4.112.0"
+  }
+}

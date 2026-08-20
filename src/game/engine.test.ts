@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   createInitialState,
   expireClock,
+  extractOriginalNumbers,
   generateNumbers,
   generateTarget,
   lockIn,
@@ -253,6 +254,25 @@ describe('expireClock', () => {
     let state = withPool([100, 87], { target: 187 })
     state = mergeTiles(state, 0, 1, '+')
     expect(expireClock(state)).toBe(state)
+  })
+})
+
+describe('extractOriginalNumbers', () => {
+  it('returns the untouched pool when no merges have happened', () => {
+    const state = withPool([3, 4, 5, 6, 10, 25])
+    expect(extractOriginalNumbers(state).sort((a, b) => a - b)).toEqual([3, 4, 5, 6, 10, 25])
+  })
+
+  it('reconstructs every original after several merges, including a chain of derived tiles', () => {
+    let state = withPool([100, 50, 5, 6, 10, 9], { target: 131 })
+    state = selectTile(state, 0) // 100
+    state = selectOperator(state, '+')
+    state = selectTile(state, 1) // 50 -> merges to 150
+    const derivedId = state.pool.find(t => t.derived)!.id
+    state = selectTile(state, derivedId) // 150
+    state = selectOperator(state, '−')
+    state = selectTile(state, state.pool.find(t => t.value === 10)!.id) // 150 - 10 = 140
+    expect(extractOriginalNumbers(state).sort((a, b) => a - b)).toEqual([5, 6, 9, 10, 50, 100])
   })
 })
 

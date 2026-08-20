@@ -24,8 +24,8 @@ function populatedStreak(): StreakData {
 
 function populatedHistory(): DailyResult[] {
   return [
-    { date: '2026-08-18', target: 500, finalValue: 500, score: 10, stepCount: 3, solveTimeMs: 42000 },
-    { date: '2026-08-19', target: 400, finalValue: 398, score: 7, stepCount: 2, solveTimeMs: 30000 },
+    { date: '2026-08-18', target: 500, finalValue: 500, score: 10, stepCount: 3, solveTimeMs: 42000, wasSolvable: true },
+    { date: '2026-08-19', target: 400, finalValue: 398, score: 7, stepCount: 2, solveTimeMs: 30000, wasSolvable: true },
   ]
 }
 

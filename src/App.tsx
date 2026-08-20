@@ -5,11 +5,14 @@ import { GameScreen } from './components/GameScreen.tsx'
 import { Header } from './components/Header.tsx'
 import { HomeScreen } from './components/HomeScreen.tsx'
 import { HowToPlayScreen } from './components/HowToPlayScreen.tsx'
+import { LeaderboardPrompt } from './components/LeaderboardPrompt.tsx'
+import { LeaderboardScreen } from './components/LeaderboardScreen.tsx'
 import { ResultScreen } from './components/ResultScreen.tsx'
 import { SettingsScreen } from './components/SettingsScreen.tsx'
 import { StatsScreen } from './components/StatsScreen.tsx'
 import { bestSolveTimeMs, formatDateLabel, getLocalDateString } from './game/daily.ts'
-import { expireClock, lockIn, scoreForValue, selectOperator, selectTile, undo } from './game/engine.ts'
+import { expireClock, extractOriginalNumbers, lockIn, scoreForValue, selectOperator, selectTile, undo } from './game/engine.ts'
+import { isPuzzleSolvable } from './game/solver.ts'
 import { ACHIEVEMENTS } from './game/achievements.ts'
 import type { Operator } from './game/types.ts'
 import { useAchievements } from './hooks/useAchievements.ts'
@@ -20,6 +23,7 @@ import { useDailyChallenge } from './hooks/useDailyChallenge.ts'
 import { useDailyTimer } from './hooks/useDailyTimer.ts'
 import { useGameStats } from './hooks/useGameStats.ts'
 import { useHardMode } from './hooks/useHardMode.ts'
+import { useLeaderboard } from './hooks/useLeaderboard.ts'
 import { useShowHomeScreen } from './hooks/useShowHomeScreen.ts'
 import { useSoundSetting } from './hooks/useSoundSetting.ts'
 import { useTheme } from './hooks/useTheme.ts'
@@ -28,6 +32,14 @@ import { resetAllData } from './utils/resetData.ts'
 import { APP_VERSION } from './version.ts'
 
 type ReturnTarget = 'home' | 'game' | 'settings'
+
+interface PendingLeaderboardEntry {
+  target: number
+  finalValue: number | null
+  score: number
+  stepCount: number
+  durationMs: number
+}
 
 export function App() {
   const today = useMemo(() => getLocalDateString(), [])
@@ -48,6 +60,7 @@ export function App() {
 
   const fastestDailySolveMs = bestSolveTimeMs(dailyChallenge.history)
   const achievements = useAchievements(gameStats.stats, dailyChallenge.streak, fastestDailySolveMs)
+  const leaderboard = useLeaderboard()
 
   const [isHomeOpen, setIsHomeOpen] = useState(showHomeScreen)
   const [isDailyOpen, setIsDailyOpen] = useState(false)
@@ -55,7 +68,9 @@ export function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false)
   const [isAchievementsOpen, setIsAchievementsOpen] = useState(false)
+  const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false)
   const [returnTo, setReturnTo] = useState<ReturnTarget>('game')
+  const [pendingLeaderboardEntry, setPendingLeaderboardEntry] = useState<PendingLeaderboardEntry | null>(null)
 
   const activeState = isDailyOpen ? daily.state : freePlay.state
   const activeSetState = isDailyOpen ? daily.setState : freePlay.setState
@@ -77,16 +92,26 @@ export function App() {
   // being set — there's only one daily attempt per day.
   useEffect(() => {
     if (daily.state.status === 'locked' && dailyChallenge.todayResult === null) {
-      const score = scoreForValue(daily.state.target, daily.state.finalValue)
+      const target = daily.state.target
+      const finalValue = daily.state.finalValue
+      const stepCount = daily.state.history.length
+      const durationMs = dailyTimer.elapsedMs
+      const score = scoreForValue(target, finalValue)
+
       gameStats.recordCompletedGame(score)
       dailyChallenge.recordDailyResult({
-        target: daily.state.target,
-        finalValue: daily.state.finalValue,
+        target,
+        finalValue,
         score,
-        stepCount: daily.state.history.length,
-        solveTimeMs: dailyTimer.elapsedMs,
+        stepCount,
+        solveTimeMs: durationMs,
+        wasSolvable: isPuzzleSolvable(extractOriginalNumbers(daily.state), target),
       })
       playSound(score === 10 ? 'win' : score > 0 ? 'close' : 'miss')
+
+      leaderboard.checkDailyQualifies(today, score).then(qualifies => {
+        if (qualifies) setPendingLeaderboardEntry({ target, finalValue, score, stepCount, durationMs })
+      })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [daily.state.status, dailyChallenge.todayResult])
@@ -96,6 +121,7 @@ export function App() {
     setIsStatsOpen(false)
     setIsSettingsOpen(false)
     setIsHowToPlayOpen(false)
+    setIsLeaderboardOpen(false)
   }
 
   function openHome() {
@@ -107,6 +133,12 @@ export function App() {
     setReturnTo(isHomeOpen ? 'home' : 'game')
     closeAllScreens()
     setIsStatsOpen(true)
+  }
+
+  function openLeaderboard() {
+    setReturnTo(isHomeOpen ? 'home' : 'game')
+    closeAllScreens()
+    setIsLeaderboardOpen(true)
   }
 
   function openSettings() {
@@ -139,7 +171,8 @@ export function App() {
     setIsDailyOpen(true)
   }
 
-  const isResultShowing = activeState.status === 'locked' && !isHomeOpen && !isStatsOpen && !isSettingsOpen && !isHowToPlayOpen
+  const isResultShowing =
+    activeState.status === 'locked' && !isHomeOpen && !isStatsOpen && !isSettingsOpen && !isHowToPlayOpen && !isLeaderboardOpen
   const showAchievementToast = achievements.newlyUnlocked.length > 0 && !isAchievementsOpen && !isResultShowing
 
   return (
@@ -155,6 +188,7 @@ export function App() {
           onPlayDaily={startDaily}
           onOpenStats={openStats}
           onOpenAchievements={() => setIsAchievementsOpen(true)}
+          onOpenLeaderboard={openLeaderboard}
           onOpenHowToPlay={() => openHowToPlayFrom('home')}
           onOpenSettings={openSettings}
         />
@@ -163,6 +197,14 @@ export function App() {
           stats={gameStats.stats}
           dailyStreak={dailyChallenge.streak}
           dailyHistory={dailyChallenge.history}
+          onClose={closeToReturnPoint}
+        />
+      ) : isLeaderboardOpen ? (
+        <LeaderboardScreen
+          fetchDailyLeaderboard={leaderboard.fetchDailyLeaderboard}
+          fetchStreakLeaderboard={leaderboard.fetchStreakLeaderboard}
+          today={today}
+          rememberedName={leaderboard.name}
           onClose={closeToReturnPoint}
         />
       ) : isSettingsOpen ? (
@@ -188,6 +230,7 @@ export function App() {
             onOpenHome={openHome}
             onOpenAchievements={() => setIsAchievementsOpen(true)}
             onOpenStats={openStats}
+            onOpenLeaderboard={openLeaderboard}
             onOpenSettings={openSettings}
             hasNewAchievement={achievements.newlyUnlocked.length > 0}
           />
@@ -215,6 +258,7 @@ export function App() {
               elapsedMs={isDailyOpen ? dailyTimer.elapsedMs : 0}
               dateLabel={isDailyOpen ? formatDateLabel(today) : undefined}
               dailyStreakCount={isDailyOpen ? dailyChallenge.streak.count : undefined}
+              wasSolvable={isDailyOpen ? dailyChallenge.todayResult?.wasSolvable : undefined}
               onPlayAgain={isDailyOpen ? undefined : startFreePlay}
               onClose={openHome}
             />
@@ -228,6 +272,19 @@ export function App() {
 
       {showAchievementToast && (
         <AchievementToast achievement={achievements.newlyUnlocked[0]} onDismiss={achievements.dismissNewlyUnlocked} />
+      )}
+
+      {pendingLeaderboardEntry && (
+        <LeaderboardPrompt
+          rememberedName={leaderboard.name}
+          onSave={playerName => {
+            const { target, finalValue, score, stepCount, durationMs } = pendingLeaderboardEntry
+            leaderboard.submitDailyScore(today, playerName, target, finalValue, score, stepCount, durationMs)
+            leaderboard.submitStreak(playerName, dailyChallenge.streak.count, today)
+            setPendingLeaderboardEntry(null)
+          }}
+          onSkip={() => setPendingLeaderboardEntry(null)}
+        />
       )}
     </div>
   )

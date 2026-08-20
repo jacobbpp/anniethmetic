@@ -29,6 +29,15 @@ function ChartIcon() {
   )
 }
 
+function LeaderboardIcon() {
+  return (
+    <svg {...ICON_PROPS}>
+      <path d="M8 6h13M8 12h13M8 18h13" />
+      <path d="M3 6h.01M3 12h.01M3 18h.01" />
+    </svg>
+  )
+}
+
 function GearIcon() {
   return (
     <svg {...ICON_PROPS}>
@@ -42,11 +51,19 @@ interface HeaderProps {
   onOpenHome: () => void
   onOpenAchievements: () => void
   onOpenStats: () => void
+  onOpenLeaderboard: () => void
   onOpenSettings: () => void
   hasNewAchievement: boolean
 }
 
-export function Header({ onOpenHome, onOpenAchievements, onOpenStats, onOpenSettings, hasNewAchievement }: HeaderProps) {
+export function Header({
+  onOpenHome,
+  onOpenAchievements,
+  onOpenStats,
+  onOpenLeaderboard,
+  onOpenSettings,
+  hasNewAchievement,
+}: HeaderProps) {
   return (
     <div className="header">
       <div className="header__row">
@@ -70,6 +87,9 @@ export function Header({ onOpenHome, onOpenAchievements, onOpenStats, onOpenSett
           </button>
           <button type="button" className="icon-btn" onClick={onOpenStats} aria-label="Stats">
             <ChartIcon />
+          </button>
+          <button type="button" className="icon-btn" onClick={onOpenLeaderboard} aria-label="Leaderboard">
+            <LeaderboardIcon />
           </button>
           <button type="button" className="icon-btn" onClick={onOpenSettings} aria-label="Settings">
             <GearIcon />

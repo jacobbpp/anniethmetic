@@ -12,6 +12,7 @@ function pendingResult(overrides: Partial<Omit<DailyResult, 'date'>> = {}): Omit
     score: 10,
     stepCount: 3,
     solveTimeMs: 45_000,
+    wasSolvable: true,
     ...overrides,
   }
 }
@@ -38,7 +39,15 @@ describe('useDailyChallenge: initial state', () => {
   })
 
   it("loads a persisted result whose date matches today", () => {
-    const stored: DailyResult = { date: TODAY, target: 500, finalValue: 500, score: 10, stepCount: 2, solveTimeMs: 1000 }
+    const stored: DailyResult = {
+      date: TODAY,
+      target: 500,
+      finalValue: 500,
+      score: 10,
+      stepCount: 2,
+      solveTimeMs: 1000,
+      wasSolvable: true,
+    }
     window.localStorage.setItem('anniethmetic-daily-result', JSON.stringify(stored))
     const { result } = renderHook(() => useDailyChallenge(TODAY))
     expect(result.current.todayResult).toEqual(stored)
@@ -112,6 +121,7 @@ describe('useDailyChallenge: recordDailyResult', () => {
       score: 10,
       stepCount: 1,
       solveTimeMs: 1000,
+      wasSolvable: true,
     }))
     window.localStorage.setItem('anniethmetic-daily-history', JSON.stringify(seeded))
     const { result } = renderHook(() => useDailyChallenge(TODAY))

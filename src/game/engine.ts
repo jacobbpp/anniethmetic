@@ -163,6 +163,32 @@ export function expireClock(state: GameState): GameState {
   return { ...state, status: 'locked', pendingOp: null, finalValue: null }
 }
 
+// Reconstructs the six original numbers a game started with, from whatever
+// remains in the pool plus whichever originals were consumed by a merge
+// along the way (each appears exactly once across history + pool, since a
+// tile once merged never reappears). Useful once a game is over and
+// something (e.g. the solver) needs the starting numbers rather than
+// today's remaining tiles.
+export function extractOriginalNumbers(state: GameState): number[] {
+  const originals: number[] = []
+  const seenIds = new Set<number>()
+  for (const record of state.history) {
+    for (const tile of [record.a, record.b]) {
+      if (!tile.derived && !seenIds.has(tile.id)) {
+        originals.push(tile.value)
+        seenIds.add(tile.id)
+      }
+    }
+  }
+  for (const tile of state.pool) {
+    if (!tile.derived && !seenIds.has(tile.id)) {
+      originals.push(tile.value)
+      seenIds.add(tile.id)
+    }
+  }
+  return originals
+}
+
 // Matches the real show's numbers round scoring exactly.
 export function scoreForValue(target: number, value: number | null): number {
   if (value === null) return 0

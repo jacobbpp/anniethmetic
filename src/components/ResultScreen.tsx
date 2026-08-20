@@ -10,8 +10,16 @@ export interface ResultScreenProps {
   elapsedMs: number
   dateLabel?: string // only present for mode === 'daily', e.g. "Aug 20"
   dailyStreakCount?: number // only present for mode === 'daily'
+  wasSolvable?: boolean // only present for mode === 'daily' — whether an exact hit existed at all
   onPlayAgain?: () => void // only present for mode === 'free' — starts a fresh free-play puzzle
   onClose: () => void // dismiss the overlay in either mode
+}
+
+function solvabilityNote(score: number, wasSolvable: boolean): string {
+  if (score === 10) return ''
+  return wasSolvable
+    ? 'There was an exact hit today — worth a hunt next time.'
+    : 'No exact hit was possible today, so getting close was the best anyone could do.'
 }
 
 type Band = 'win' | 'close' | 'miss'
@@ -41,6 +49,7 @@ export function ResultScreen({
   elapsedMs,
   dateLabel,
   dailyStreakCount,
+  wasSolvable,
   onPlayAgain,
   onClose,
 }: ResultScreenProps) {
@@ -62,6 +71,9 @@ export function ResultScreen({
           {score} pts · {pluralizeStep(stepCount)} · {formatElapsedTime(elapsedMs)}
         </p>
         <div className="overlay__grid">{emojiRow}</div>
+        {mode === 'daily' && typeof wasSolvable === 'boolean' && solvabilityNote(score, wasSolvable) && (
+          <p className="overlay__subtitle">{solvabilityNote(score, wasSolvable)}</p>
+        )}
         {mode === 'daily' && typeof dailyStreakCount === 'number' && dailyStreakCount > 0 && (
           <span className="pill pill--win">{buildStreakShareText(dailyStreakCount)}</span>
         )}

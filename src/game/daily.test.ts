@@ -9,6 +9,7 @@ import {
   getLocalDateString,
   isStreakActive,
   recordDailyStreak,
+  solvabilityBreakdown,
 } from './daily.ts'
 import type { DailyResult, StreakData } from './daily.ts'
 
@@ -20,6 +21,7 @@ function result(overrides: Partial<DailyResult> = {}): DailyResult {
     score: 10,
     stepCount: 3,
     solveTimeMs: 60_000,
+    wasSolvable: true,
     ...overrides,
   }
 }
@@ -186,5 +188,27 @@ describe('bestSolveTimeMs', () => {
 
   it('returns null when every entry has a null solve time', () => {
     expect(bestSolveTimeMs([result({ solveTimeMs: null })])).toBeNull()
+  })
+})
+
+describe('solvabilityBreakdown', () => {
+  it('splits history into solvable and unsolvable days', () => {
+    const history = [
+      result({ wasSolvable: true, score: 10 }),
+      result({ wasSolvable: true, score: 7 }),
+      result({ wasSolvable: false, score: 0 }),
+    ]
+    expect(solvabilityBreakdown(history)).toEqual({ solvableCount: 2, unsolvableCount: 1, exactOnSolvableCount: 1 })
+  })
+
+  it('only counts an exact hit toward exactOnSolvableCount when that day was actually solvable', () => {
+    // A score of 10 on an unsolvable day isn't possible in practice, but the
+    // function should still only ever attribute exact hits to solvable days.
+    const history = [result({ wasSolvable: false, score: 10 })]
+    expect(solvabilityBreakdown(history).exactOnSolvableCount).toBe(0)
+  })
+
+  it('returns all zeros for an empty history', () => {
+    expect(solvabilityBreakdown([])).toEqual({ solvableCount: 0, unsolvableCount: 0, exactOnSolvableCount: 0 })
   })
 })

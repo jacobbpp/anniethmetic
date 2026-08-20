@@ -21,6 +21,7 @@ function renderHomeScreen(overrides: Partial<HomeScreenProps> = {}) {
     onPlayDaily: vi.fn(),
     onOpenStats: vi.fn(),
     onOpenAchievements: vi.fn(),
+    onOpenLeaderboard: vi.fn(),
     onOpenHowToPlay: vi.fn(),
     onOpenSettings: vi.fn(),
     ...overrides,
@@ -49,6 +50,7 @@ describe('HomeScreen', () => {
       score: 10,
       stepCount: 3,
       solveTimeMs: 42_000,
+      wasSolvable: true,
     }
     renderHomeScreen({ todayResult })
 
@@ -68,6 +70,7 @@ describe('HomeScreen', () => {
       score: 5,
       stepCount: 1,
       solveTimeMs: 10_000,
+      wasSolvable: true,
     }
     renderHomeScreen({ todayResult })
 
@@ -98,8 +101,17 @@ describe('HomeScreen', () => {
     fireEvent.click(screen.getByRole('button', { name: 'How to play' }))
     expect(props.onOpenHowToPlay).toHaveBeenCalledOnce()
 
+    fireEvent.click(screen.getByRole('button', { name: "See today's leaderboard →" }))
+    expect(props.onOpenLeaderboard).toHaveBeenCalledOnce()
+
     fireEvent.click(screen.getByRole('button', { name: 'Settings' }))
     expect(props.onOpenSettings).toHaveBeenCalledOnce()
+  })
+
+  it('places the leaderboard link inside the daily challenge card', () => {
+    renderHomeScreen()
+    const link = screen.getByRole('button', { name: "See today's leaderboard →" })
+    expect(link.closest('.home-daily-card')).not.toBeNull()
   })
 
   it('shows the average score to 1 decimal place, or a dash with no games played', () => {

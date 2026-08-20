@@ -22,6 +22,7 @@ export interface HomeScreenProps {
   onPlayDaily: () => void
   onOpenStats: () => void
   onOpenAchievements: () => void
+  onOpenLeaderboard: () => void
   onOpenHowToPlay: () => void
   onOpenSettings: () => void
 }
@@ -40,6 +41,7 @@ export function HomeScreen({
   onPlayDaily,
   onOpenStats,
   onOpenAchievements,
+  onOpenLeaderboard,
   onOpenHowToPlay,
   onOpenSettings,
 }: HomeScreenProps) {
@@ -89,6 +91,9 @@ export function HomeScreen({
           disabled={played}
         >
           {played ? 'Played — nice one' : "Play today's puzzle"}
+        </button>
+        <button type="button" className="home-daily-card__leaderboard-link" onClick={onOpenLeaderboard}>
+          See today's leaderboard →
         </button>
       </div>
 

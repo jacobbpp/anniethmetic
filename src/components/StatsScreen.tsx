@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { SCORE_BANDS, averageScore, hasPlayedAnyGames, scoreBandCount, winRatePercent } from '../game/stats.ts'
 import type { StatsData } from '../game/stats.ts'
-import { averageSolveTimeMs, bestSolveTimeMs } from '../game/daily.ts'
+import { averageSolveTimeMs, bestSolveTimeMs, solvabilityBreakdown } from '../game/daily.ts'
 import type { DailyResult, StreakData } from '../game/daily.ts'
 import { formatElapsedTime } from '../game/share.ts'
 
@@ -83,10 +83,12 @@ function MenuRow({ title, preview, onClick }: MenuRowProps) {
   )
 }
 
-function ScoreSection({ stats }: { stats: StatsData }) {
+function ScoreSection({ stats, dailyHistory }: { stats: StatsData; dailyHistory: DailyResult[] }) {
   const avg = averageScore(stats)
   const bandCounts = SCORE_BANDS.map(band => scoreBandCount(stats, band))
   const maxCount = Math.max(...bandCounts)
+  const { solvableCount, unsolvableCount, exactOnSolvableCount } = solvabilityBreakdown(dailyHistory)
+  const solvedDays = solvableCount + unsolvableCount
 
   return (
     <>
@@ -109,6 +111,14 @@ function ScoreSection({ stats }: { stats: StatsData }) {
           )
         })}
       </div>
+      {solvedDays > 0 && (
+        <p style={{ fontSize: 12, color: 'var(--text-dim)', textAlign: 'center' }}>
+          {solvableCount} of your {solvedDays} daily puzzle{solvedDays === 1 ? '' : 's'} had an exact solution — you
+          found it {exactOnSolvableCount} of those times.
+          {unsolvableCount > 0 &&
+            ` The other ${unsolvableCount} had no exact hit possible, same as the real show.`}
+        </p>
+      )}
     </>
   )
 }
@@ -211,7 +221,7 @@ export function StatsScreen({ stats, dailyStreak, dailyHistory, onClose }: Stats
             />
           </>
         )}
-        {section === 'score' && <ScoreSection stats={stats} />}
+        {section === 'score' && <ScoreSection stats={stats} dailyHistory={dailyHistory} />}
         {section === 'streak' && <StreakSection streak={dailyStreak} />}
         {section === 'time' && <TimeSection history={dailyHistory} />}
         {section === 'winrate' && <WinRateSection stats={stats} />}

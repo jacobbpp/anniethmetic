@@ -86,6 +86,11 @@ export interface DailyResult {
   score: number
   stepCount: number
   solveTimeMs: number | null
+  // Whether some merge chain could have hit the target exactly — not every
+  // daily puzzle has one, same as the real show. Computed once via
+  // game/solver.ts at the moment the result is recorded, not re-derived
+  // here (solving is comparatively expensive; recording only happens once).
+  wasSolvable: boolean
 }
 
 export function averageSolveTimeMs(history: DailyResult[]): number | null {
@@ -97,4 +102,20 @@ export function averageSolveTimeMs(history: DailyResult[]): number | null {
 export function bestSolveTimeMs(history: DailyResult[]): number | null {
   const withTime = history.map(r => r.solveTimeMs).filter((t): t is number => t !== null)
   return withTime.length === 0 ? null : Math.min(...withTime)
+}
+
+export interface SolvabilityBreakdown {
+  solvableCount: number
+  unsolvableCount: number
+  // Of the solvable days, how many the player actually landed exactly.
+  exactOnSolvableCount: number
+}
+
+export function solvabilityBreakdown(history: DailyResult[]): SolvabilityBreakdown {
+  const solvable = history.filter(r => r.wasSolvable)
+  return {
+    solvableCount: solvable.length,
+    unsolvableCount: history.length - solvable.length,
+    exactOnSolvableCount: solvable.filter(r => r.score === 10).length,
+  }
 }
