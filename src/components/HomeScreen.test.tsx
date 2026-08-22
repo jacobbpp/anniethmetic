@@ -121,7 +121,14 @@ describe('HomeScreen', () => {
     cleanup()
 
     renderHomeScreen({
-      stats: { totalGames: 2, totalScore: 15, scoreDistribution: [0, 1, 1, 0], currentWinStreak: 2, bestWinStreak: 2 },
+      stats: {
+        totalGames: 2,
+        totalScore: 15,
+        scoreDistribution: [0, 1, 1, 0],
+        currentWinStreak: 2,
+        bestWinStreak: 2,
+        dailyGames: 0,
+      },
     })
     expect(screen.getByText('7.5')).toBeInTheDocument()
   })

@@ -119,3 +119,23 @@ export function solvabilityBreakdown(history: DailyResult[]): SolvabilityBreakdo
     exactOnSolvableCount: solvable.filter(r => r.score === 10).length,
   }
 }
+
+export interface CalendarDay {
+  date: string
+  result: DailyResult | null
+}
+
+// The last `days` calendar dates ending today, oldest first, each matched
+// against `history` by exact date — a gap (no entry) means that day's
+// challenge was never attempted, distinct from attempting it and missing.
+// A day beyond what `history` actually retains (it's capped at 30 entries)
+// just comes back as a gap too, same as a day that was genuinely skipped.
+export function buildCalendarDays(history: DailyResult[], today: string, days = 30): CalendarDay[] {
+  const byDate = new Map(history.map(result => [result.date, result]))
+  const calendarDays: CalendarDay[] = []
+  for (let i = days - 1; i >= 0; i--) {
+    const date = addDays(today, -i)
+    calendarDays.push({ date, result: byDate.get(date) ?? null })
+  }
+  return calendarDays
+}

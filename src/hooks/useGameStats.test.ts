@@ -25,6 +25,7 @@ describe('useGameStats', () => {
         scoreDistribution: [1, 1, 0, 0],
         currentWinStreak: 2,
         bestWinStreak: 2,
+        dailyGames: 1,
       }),
     )
 
@@ -32,6 +33,26 @@ describe('useGameStats', () => {
 
     expect(result.current.stats.totalGames).toBe(2)
     expect(result.current.stats.totalScore).toBe(17)
+    expect(result.current.stats.dailyGames).toBe(1)
+  })
+
+  it('backfills dailyGames as 0 for a save written before the free/daily split existed', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        totalGames: 2,
+        totalScore: 17,
+        scoreDistribution: [1, 1, 0, 0],
+        currentWinStreak: 2,
+        bestWinStreak: 2,
+        // no dailyGames field at all — an older save shape
+      }),
+    )
+
+    const { result } = renderHook(() => useGameStats())
+
+    expect(result.current.stats.dailyGames).toBe(0)
+    expect(result.current.stats.totalGames).toBe(2) // the rest of the save still loads intact
   })
 
   it('falls back to an empty StatsData when the stored value is malformed JSON', () => {
@@ -44,7 +65,7 @@ describe('useGameStats', () => {
     const { result } = renderHook(() => useGameStats())
 
     act(() => {
-      result.current.recordCompletedGame(10)
+      result.current.recordCompletedGame(10, false)
     })
 
     expect(result.current.stats.totalGames).toBe(1)
@@ -61,7 +82,7 @@ describe('useGameStats', () => {
 
     expect(() => {
       act(() => {
-        result.current.recordCompletedGame(10)
+        result.current.recordCompletedGame(10, false)
       })
     }).not.toThrow()
 

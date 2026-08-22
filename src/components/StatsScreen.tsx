@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { SCORE_BANDS, averageScore, hasPlayedAnyGames, scoreBandCount, winRatePercent } from '../game/stats.ts'
+import { SCORE_BANDS, averageScore, freePlayGamesCount, hasPlayedAnyGames, scoreBandCount, winRatePercent } from '../game/stats.ts'
 import type { StatsData } from '../game/stats.ts'
-import { averageSolveTimeMs, bestSolveTimeMs, solvabilityBreakdown } from '../game/daily.ts'
-import type { DailyResult, StreakData } from '../game/daily.ts'
+import { averageSolveTimeMs, bestSolveTimeMs, buildCalendarDays, solvabilityBreakdown } from '../game/daily.ts'
+import type { CalendarDay, DailyResult, StreakData } from '../game/daily.ts'
 import { formatElapsedTime } from '../game/share.ts'
 
 type StatsSection = 'menu' | 'score' | 'streak' | 'time' | 'winrate'
@@ -27,6 +27,7 @@ export interface StatsScreenProps {
   stats: StatsData
   dailyStreak: StreakData
   dailyHistory: DailyResult[]
+  today: string
   onClose: () => void
 }
 
@@ -49,6 +50,15 @@ function scorePreview(stats: StatsData): string {
   if (!hasPlayedAnyGames(stats)) return 'No games yet'
   const avg = averageScore(stats)
   return `Average ${avg === null ? '0.0' : avg.toFixed(1)} out of 10`
+}
+
+function pluralize(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? '' : 's'}`
+}
+
+function gamesSplitCaption(stats: StatsData): string {
+  const freePlay = freePlayGamesCount(stats)
+  return `${pluralize(stats.totalGames, 'game')} played — ${freePlay} free play, ${stats.dailyGames} daily`
 }
 
 function streakPreview(dailyStreak: StreakData): string {
@@ -92,6 +102,11 @@ function ScoreSection({ stats, dailyHistory }: { stats: StatsData; dailyHistory:
 
   return (
     <>
+      {hasPlayedAnyGames(stats) && (
+        <p style={{ fontSize: 12, color: 'var(--text-dim)', textAlign: 'center', margin: 0 }}>
+          {gamesSplitCaption(stats)}
+        </p>
+      )}
       <div className="stats-hero-row">
         <div className="stats-hero">
           <p className="stats-hero__value">{avg === null ? '—' : avg.toFixed(1)}</p>
@@ -123,18 +138,49 @@ function ScoreSection({ stats, dailyHistory }: { stats: StatsData; dailyHistory:
   )
 }
 
-function StreakSection({ streak }: { streak: StreakData }) {
+function calendarCellClass(day: CalendarDay): string {
+  if (day.result === null) return 'stats-calendar__cell stats-calendar__cell--none'
+  const { score } = day.result
+  if (score === 10) return 'stats-calendar__cell stats-calendar__cell--win'
+  if (score === 7 || score === 5) return 'stats-calendar__cell stats-calendar__cell--close'
+  return 'stats-calendar__cell stats-calendar__cell--miss'
+}
+
+function StreakSection({ streak, dailyHistory, today }: { streak: StreakData; dailyHistory: DailyResult[]; today: string }) {
+  const calendarDays = buildCalendarDays(dailyHistory, today)
   return (
-    <div className="stats-hero-row">
-      <div className="stats-hero">
-        <p className="stats-hero__value">{streak.count}</p>
-        <p className="stats-hero__label">current streak</p>
+    <>
+      <div className="stats-hero-row">
+        <div className="stats-hero">
+          <p className="stats-hero__value">{streak.count}</p>
+          <p className="stats-hero__label">current streak</p>
+        </div>
+        <div className="stats-hero">
+          <p className="stats-hero__value">{streak.bestStreak}</p>
+          <p className="stats-hero__label">best streak</p>
+        </div>
       </div>
-      <div className="stats-hero">
-        <p className="stats-hero__value">{streak.bestStreak}</p>
-        <p className="stats-hero__label">best streak</p>
+      <p className="stats-calendar__title">Last 30 days</p>
+      <div className="stats-calendar">
+        {calendarDays.map(day => (
+          <span key={day.date} className={calendarCellClass(day)} title={day.date} />
+        ))}
       </div>
-    </div>
+      <div className="stats-calendar__legend">
+        <span>
+          <i className="stats-calendar__swatch stats-calendar__swatch--win" /> exact
+        </span>
+        <span>
+          <i className="stats-calendar__swatch stats-calendar__swatch--close" /> close
+        </span>
+        <span>
+          <i className="stats-calendar__swatch stats-calendar__swatch--miss" /> miss
+        </span>
+        <span>
+          <i className="stats-calendar__swatch stats-calendar__swatch--none" /> not played
+        </span>
+      </div>
+    </>
   )
 }
 
@@ -183,7 +229,7 @@ function WinRateSection({ stats }: { stats: StatsData }) {
   )
 }
 
-export function StatsScreen({ stats, dailyStreak, dailyHistory, onClose }: StatsScreenProps) {
+export function StatsScreen({ stats, dailyStreak, dailyHistory, today, onClose }: StatsScreenProps) {
   const [section, setSection] = useState<StatsSection>('menu')
 
   const handleBack = () => {
@@ -222,7 +268,7 @@ export function StatsScreen({ stats, dailyStreak, dailyHistory, onClose }: Stats
           </>
         )}
         {section === 'score' && <ScoreSection stats={stats} dailyHistory={dailyHistory} />}
-        {section === 'streak' && <StreakSection streak={dailyStreak} />}
+        {section === 'streak' && <StreakSection streak={dailyStreak} dailyHistory={dailyHistory} today={today} />}
         {section === 'time' && <TimeSection history={dailyHistory} />}
         {section === 'winrate' && <WinRateSection stats={stats} />}
       </div>

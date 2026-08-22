@@ -6,15 +6,17 @@ import type { StatsData } from '../game/stats.ts'
 import { createEmptyStreak } from '../game/daily.ts'
 import type { DailyResult, StreakData } from '../game/daily.ts'
 
+const TODAY = '2026-08-20'
+
 afterEach(() => {
   cleanup()
 })
 
 function populatedStats(): StatsData {
   let stats = createEmptyStats()
-  stats = recordGame(stats, 10)
-  stats = recordGame(stats, 7)
-  stats = recordGame(stats, 0)
+  stats = recordGame(stats, 10, false)
+  stats = recordGame(stats, 7, true)
+  stats = recordGame(stats, 0, false)
   return stats
 }
 
@@ -37,7 +39,13 @@ function previewFor(title: string): string {
 describe('StatsScreen menu previews', () => {
   it('shows empty-state preview text for every row when nothing has been played', () => {
     render(
-      <StatsScreen stats={createEmptyStats()} dailyStreak={createEmptyStreak()} dailyHistory={[]} onClose={vi.fn()} />,
+      <StatsScreen
+        stats={createEmptyStats()}
+        dailyStreak={createEmptyStreak()}
+        dailyHistory={[]}
+        today={TODAY}
+        onClose={vi.fn()}
+      />,
     )
 
     expect(previewFor('Score average & distribution')).toBe('No games yet')
@@ -52,6 +60,7 @@ describe('StatsScreen menu previews', () => {
         stats={populatedStats()}
         dailyStreak={populatedStreak()}
         dailyHistory={populatedHistory()}
+        today={TODAY}
         onClose={vi.fn()}
       />,
     )
@@ -71,6 +80,7 @@ describe('StatsScreen navigation', () => {
         stats={populatedStats()}
         dailyStreak={populatedStreak()}
         dailyHistory={populatedHistory()}
+        today={TODAY}
         onClose={onClose}
       />,
     )
@@ -95,6 +105,7 @@ describe('StatsScreen navigation', () => {
         stats={populatedStats()}
         dailyStreak={populatedStreak()}
         dailyHistory={populatedHistory()}
+        today={TODAY}
         onClose={vi.fn()}
       />,
     )
@@ -109,5 +120,74 @@ describe('StatsScreen navigation', () => {
 
     fireEvent.click(screen.getByText('Win rate & streak'))
     expect(screen.getByText('Any score above nought counts as a win.')).toBeInTheDocument()
+  })
+})
+
+describe('StatsScreen: free play vs daily split', () => {
+  it('shows no split caption when nothing has been played', () => {
+    render(
+      <StatsScreen
+        stats={createEmptyStats()}
+        dailyStreak={createEmptyStreak()}
+        dailyHistory={[]}
+        today={TODAY}
+        onClose={vi.fn()}
+      />,
+    )
+    fireEvent.click(screen.getByText('Score average & distribution'))
+    expect(screen.queryByText(/free play/)).not.toBeInTheDocument()
+  })
+
+  it('shows the games-played split once games have been recorded', () => {
+    render(
+      <StatsScreen
+        stats={populatedStats()}
+        dailyStreak={populatedStreak()}
+        dailyHistory={populatedHistory()}
+        today={TODAY}
+        onClose={vi.fn()}
+      />,
+    )
+    fireEvent.click(screen.getByText('Score average & distribution'))
+    // populatedStats(): one free-play (score 10), one daily (score 7), one free-play (score 0) — 2 free play, 1 daily.
+    expect(screen.getByText('3 games played — 2 free play, 1 daily')).toBeInTheDocument()
+  })
+})
+
+describe('StatsScreen: daily calendar', () => {
+  it('renders 30 day cells for the last 30 days', () => {
+    const { container } = render(
+      <StatsScreen
+        stats={populatedStats()}
+        dailyStreak={populatedStreak()}
+        dailyHistory={populatedHistory()}
+        today={TODAY}
+        onClose={vi.fn()}
+      />,
+    )
+    fireEvent.click(screen.getByText('Daily streak'))
+    const cells = container.querySelectorAll('.stats-calendar__cell')
+    expect(cells).toHaveLength(30)
+  })
+
+  it('colors a day with an exact solve as a win cell, a close day as a close cell, and an unplayed day as not-played', () => {
+    const { container } = render(
+      <StatsScreen
+        stats={populatedStats()}
+        dailyStreak={populatedStreak()}
+        dailyHistory={populatedHistory()}
+        today={TODAY}
+        onClose={vi.fn()}
+      />,
+    )
+    fireEvent.click(screen.getByText('Daily streak'))
+
+    const winCell = container.querySelector('[title="2026-08-18"]')
+    const closeCell = container.querySelector('[title="2026-08-19"]')
+    const unplayedCell = container.querySelector(`[title="${TODAY}"]`)
+
+    expect(winCell).toHaveClass('stats-calendar__cell--win')
+    expect(closeCell).toHaveClass('stats-calendar__cell--close')
+    expect(unplayedCell).toHaveClass('stats-calendar__cell--none')
   })
 })

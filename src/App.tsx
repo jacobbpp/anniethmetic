@@ -91,7 +91,7 @@ export function App() {
   useEffect(() => {
     if (freePlay.state.status === 'locked' && !freePlay.hasRecorded) {
       const score = scoreForValue(freePlay.state.target, freePlay.state.finalValue)
-      gameStats.recordCompletedGame(score)
+      gameStats.recordCompletedGame(score, false)
       freePlay.setHasRecorded(true)
       playSound(score === 10 ? 'win' : score > 0 ? 'close' : 'miss')
     }
@@ -108,7 +108,7 @@ export function App() {
       const durationMs = dailyTimer.elapsedMs
       const score = scoreForValue(target, finalValue)
 
-      gameStats.recordCompletedGame(score)
+      gameStats.recordCompletedGame(score, true)
       dailyChallenge.recordDailyResult({
         target,
         finalValue,
@@ -207,6 +207,7 @@ export function App() {
           stats={gameStats.stats}
           dailyStreak={dailyChallenge.streak}
           dailyHistory={dailyChallenge.history}
+          today={today}
           onClose={closeToReturnPoint}
         />
       ) : isLeaderboardOpen ? (

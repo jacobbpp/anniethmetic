@@ -7,6 +7,7 @@ export interface StatsData {
   scoreDistribution: number[] // length 4, indexed per SCORE_BANDS
   currentWinStreak: number
   bestWinStreak: number
+  dailyGames: number // how many of totalGames were daily-challenge completions
 }
 
 export function createEmptyStats(): StatsData {
@@ -16,12 +17,13 @@ export function createEmptyStats(): StatsData {
     scoreDistribution: [0, 0, 0, 0],
     currentWinStreak: 0,
     bestWinStreak: 0,
+    dailyGames: 0,
   }
 }
 
 // Any nonzero score (10, 7, or 5) counts as a "win" for streak purposes — a
 // 0 is the only true miss. Immutable: never mutates the input stats object.
-export function recordGame(stats: StatsData, score: number): StatsData {
+export function recordGame(stats: StatsData, score: number, isDaily: boolean): StatsData {
   const scoreDistribution = [...stats.scoreDistribution]
   const bandIndex = SCORE_BANDS.indexOf(score as (typeof SCORE_BANDS)[number])
   if (bandIndex !== -1) scoreDistribution[bandIndex] += 1
@@ -35,7 +37,12 @@ export function recordGame(stats: StatsData, score: number): StatsData {
     scoreDistribution,
     currentWinStreak,
     bestWinStreak: Math.max(stats.bestWinStreak, currentWinStreak),
+    dailyGames: stats.dailyGames + (isDaily ? 1 : 0),
   }
+}
+
+export function freePlayGamesCount(stats: StatsData): number {
+  return stats.totalGames - stats.dailyGames
 }
 
 export function averageScore(stats: StatsData): number | null {
