@@ -28,6 +28,7 @@ export interface SettingsScreenProps {
   classicClock: boolean
   onToggleClassicClock: () => void
   onOpenHowToPlay: () => void
+  onOpenWhatsNew: () => void
   onResetData: () => void
   onClose: () => void
   version: string
@@ -43,6 +44,7 @@ export function SettingsScreen({
   classicClock,
   onToggleClassicClock,
   onOpenHowToPlay,
+  onOpenWhatsNew,
   onResetData,
   onClose,
   version,
@@ -162,6 +164,14 @@ export function SettingsScreen({
           <span className="menu-row-text">
             <span className="menu-row-title">How to play</span>
             <span className="menu-row-preview">Rules, scoring, and a few tips</span>
+          </span>
+          <ChevronIcon />
+        </button>
+
+        <button type="button" className="menu-row" onClick={onOpenWhatsNew}>
+          <span className="menu-row-text">
+            <span className="menu-row-title">What's new</span>
+            <span className="menu-row-preview">Full release history</span>
           </span>
           <ChevronIcon />
         </button>

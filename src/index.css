@@ -547,6 +547,63 @@ button:focus-visible {
   flex: 1;
 }
 
+/* ---------- what's new ---------- */
+
+.whats-new {
+  text-align: left;
+  max-width: 380px;
+}
+
+.whats-new .overlay__title {
+  text-align: center;
+}
+
+.whats-new__list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 55vh;
+  overflow-y: auto;
+}
+
+.whats-new__entry {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(var(--surface-tint-rgb), 0.05);
+}
+
+.whats-new__entry-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.whats-new__version {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--cta);
+}
+
+.whats-new__date {
+  font-size: 11.5px;
+  color: var(--text-disabled);
+}
+
+.whats-new__highlights {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13.5px;
+  color: var(--text-dim);
+}
+
 /* ---------- home screen ---------- */
 
 .home-screen {

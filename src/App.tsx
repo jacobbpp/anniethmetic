@@ -10,6 +10,7 @@ import { LeaderboardScreen } from './components/LeaderboardScreen.tsx'
 import { ResultScreen } from './components/ResultScreen.tsx'
 import { SettingsScreen } from './components/SettingsScreen.tsx'
 import { StatsScreen } from './components/StatsScreen.tsx'
+import { WhatsNewScreen } from './components/WhatsNewScreen.tsx'
 import { bestSolveTimeMs, formatDateLabel, getLocalDateString } from './game/daily.ts'
 import {
   backspace,
@@ -37,6 +38,7 @@ import { useLeaderboard } from './hooks/useLeaderboard.ts'
 import { useShowHomeScreen } from './hooks/useShowHomeScreen.ts'
 import { useSoundSetting } from './hooks/useSoundSetting.ts'
 import { useTheme } from './hooks/useTheme.ts'
+import { useWhatsNew } from './hooks/useWhatsNew.ts'
 import { playSound } from './utils/sound.ts'
 import { resetAllData } from './utils/resetData.ts'
 import { APP_VERSION } from './version.ts'
@@ -63,6 +65,7 @@ export function App() {
   const { muted, toggleMuted } = useSoundSetting()
   const { showHomeScreen } = useShowHomeScreen()
   const { classicClock, toggleClassicClock } = useClassicClockSetting()
+  const whatsNew = useWhatsNew()
 
   const dailyHasStarted = daily.state.tokens.length > 0
   const dailyIsLocked = daily.state.status === 'locked'
@@ -229,6 +232,7 @@ export function App() {
           classicClock={classicClock}
           onToggleClassicClock={toggleClassicClock}
           onOpenHowToPlay={() => openHowToPlayFrom('settings')}
+          onOpenWhatsNew={whatsNew.openFullHistory}
           onResetData={resetAllData}
           onClose={closeToReturnPoint}
           version={APP_VERSION}
@@ -297,6 +301,8 @@ export function App() {
           onSkip={() => setPendingLeaderboardEntry(null)}
         />
       )}
+
+      {whatsNew.isOpen && <WhatsNewScreen entries={whatsNew.entries} onClose={whatsNew.close} />}
     </div>
   )
 }

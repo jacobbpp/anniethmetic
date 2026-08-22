@@ -13,6 +13,7 @@ function renderScreen(overrides: Partial<Parameters<typeof SettingsScreen>[0]> =
     classicClock: false,
     onToggleClassicClock: vi.fn(),
     onOpenHowToPlay: vi.fn(),
+    onOpenWhatsNew: vi.fn(),
     onResetData: vi.fn(),
     onClose: vi.fn(),
     version: '1.0.0',
@@ -76,6 +77,12 @@ describe('SettingsScreen', () => {
     const props = renderScreen()
     fireEvent.click(screen.getByRole('button', { name: /how to play/i }))
     expect(props.onOpenHowToPlay).toHaveBeenCalledTimes(1)
+  })
+
+  it('calls onOpenWhatsNew when the what\'s new row is clicked', () => {
+    const props = renderScreen()
+    fireEvent.click(screen.getByRole('button', { name: /what's new/i }))
+    expect(props.onOpenWhatsNew).toHaveBeenCalledTimes(1)
   })
 
   it('calls onClose when the back arrow is clicked', () => {
