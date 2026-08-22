@@ -1,5 +1,12 @@
+import {
+  canPressCloseBracket,
+  canPressNumber,
+  canPressOpenBracket,
+  canPressOperator,
+  evaluateExpression,
+} from '../game/engine.ts'
 import { formatElapsedTime } from '../game/share.ts'
-import type { GameState, Operator } from '../game/types.ts'
+import type { ExpressionToken, GameState, Operator } from '../game/types.ts'
 import { useCountdown } from '../hooks/useCountdown.ts'
 
 const OPERATORS: Operator[] = ['+', '−', '×', '÷']
@@ -11,18 +18,37 @@ interface GameScreenProps {
   hardMode: boolean
   classicClockEnabled: boolean
   elapsedMs?: number
-  onSelectTile: (id: number) => void
-  onSelectOperator: (op: Operator) => void
-  onUndo: () => void
+  onPressNumber: (tileId: number) => void
+  onPressOperator: (op: Operator) => void
+  onPressOpenBracket: () => void
+  onPressCloseBracket: () => void
+  onBackspace: () => void
   onLockIn: () => void
   onExpireClock: () => void
 }
 
-function tileClassName(derived: boolean, selected: boolean): string {
-  const classes = ['game-num']
-  if (derived) classes.push('is-derived')
-  if (selected) classes.push('is-selected')
-  return classes.join(' ')
+function formatToken(token: ExpressionToken): string {
+  if (token.type === 'number') return String(token.value)
+  if (token.type === 'operator') return token.op
+  if (token.type === 'open') return '('
+  return ')'
+}
+
+// Spaces sit around operators and between adjacent numbers/brackets, but
+// hug the inside of a bracket pair — "(5 + 3) × 2", not "( 5 + 3 ) × 2".
+function formatExpression(tokens: ExpressionToken[]): string {
+  let result = ''
+  tokens.forEach((token, index) => {
+    const str = formatToken(token)
+    if (index === 0) {
+      result += str
+      return
+    }
+    const prev = tokens[index - 1]
+    const needsSpace = prev.type !== 'open' && token.type !== 'close'
+    result += (needsSpace ? ' ' : '') + str
+  })
+  return result
 }
 
 export function GameScreen({
@@ -31,18 +57,20 @@ export function GameScreen({
   hardMode,
   classicClockEnabled,
   elapsedMs,
-  onSelectTile,
-  onSelectOperator,
-  onUndo,
+  onPressNumber,
+  onPressOperator,
+  onPressOpenBracket,
+  onPressCloseBracket,
+  onBackspace,
   onLockIn,
   onExpireClock,
 }: GameScreenProps) {
-  const hasStarted = state.selectedId !== null || state.history.length > 0
+  const hasStarted = state.tokens.length > 0
   const clockActive = classicClockEnabled && hasStarted && state.status !== 'locked'
   const { secondsLeft } = useCountdown(resetSignal, clockActive, CLASSIC_CLOCK_SECONDS, onExpireClock)
 
-  const selectedTile = state.pool.find(tile => tile.id === state.selectedId) ?? null
-  const stepsText = state.history.map(h => `${h.a.value} ${h.op} ${h.b.value} = ${h.result.value}`).join('  ·  ')
+  const locked = state.status === 'locked'
+  const liveValue = evaluateExpression(state.tokens)
 
   return (
     <div className="game-screen">
@@ -64,16 +92,15 @@ export function GameScreen({
 
       <div className="game-working">
         <div className="game-working__value">
-          {selectedTile ? (
-            <span>
-              {selectedTile.value}
-              {state.pendingOp ? ` ${state.pendingOp} ?` : ''}
-            </span>
+          {hasStarted ? (
+            <span>{formatExpression(state.tokens)}</span>
           ) : (
-            <span className="game-working__placeholder">select a tile</span>
+            <span className="game-working__placeholder">tap a number to start</span>
           )}
         </div>
-        {!hardMode && <div className="game-working__steps">{stepsText}</div>}
+        {!hardMode && (
+          <div className="game-working__steps">{liveValue !== null ? `= ${liveValue}` : ' '}</div>
+        )}
       </div>
 
       <div className="game-ops">
@@ -81,24 +108,42 @@ export function GameScreen({
           <button
             key={op}
             type="button"
-            className={state.pendingOp === op ? 'game-op is-active' : 'game-op'}
-            disabled={state.status === 'locked' || state.selectedId === null}
-            onClick={() => onSelectOperator(op)}
+            className="game-op"
+            disabled={locked || !canPressOperator(state, op)}
+            onClick={() => onPressOperator(op)}
             aria-label={`Operator ${op}`}
           >
             {op}
           </button>
         ))}
+        <button
+          type="button"
+          className="game-op"
+          disabled={locked || !canPressOpenBracket(state)}
+          onClick={onPressOpenBracket}
+          aria-label="Open bracket"
+        >
+          (
+        </button>
+        <button
+          type="button"
+          className="game-op"
+          disabled={locked || !canPressCloseBracket(state)}
+          onClick={onPressCloseBracket}
+          aria-label="Close bracket"
+        >
+          )
+        </button>
       </div>
 
       <div className="game-numbers">
-        {state.pool.map(tile => (
+        {state.tiles.map(tile => (
           <button
             key={tile.id}
             type="button"
-            className={tileClassName(tile.derived, tile.id === state.selectedId)}
-            disabled={state.status === 'locked'}
-            onClick={() => onSelectTile(tile.id)}
+            className="game-num"
+            disabled={locked || !canPressNumber(state, tile.id)}
+            onClick={() => onPressNumber(tile.id)}
           >
             {tile.value}
           </button>
@@ -106,20 +151,10 @@ export function GameScreen({
       </div>
 
       <div className="btn-row">
-        <button
-          type="button"
-          className="btn btn--ghost"
-          onClick={onUndo}
-          disabled={state.status === 'locked' || state.history.length === 0}
-        >
-          Undo
+        <button type="button" className="btn btn--ghost" onClick={onBackspace} disabled={locked || state.tokens.length === 0}>
+          Backspace
         </button>
-        <button
-          type="button"
-          className="btn btn--primary"
-          onClick={onLockIn}
-          disabled={state.status === 'locked' || state.selectedId === null}
-        >
+        <button type="button" className="btn btn--primary" onClick={onLockIn} disabled={locked || liveValue === null}>
           Lock in answer
         </button>
       </div>

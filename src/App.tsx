@@ -11,7 +11,17 @@ import { ResultScreen } from './components/ResultScreen.tsx'
 import { SettingsScreen } from './components/SettingsScreen.tsx'
 import { StatsScreen } from './components/StatsScreen.tsx'
 import { bestSolveTimeMs, formatDateLabel, getLocalDateString } from './game/daily.ts'
-import { expireClock, extractOriginalNumbers, lockIn, scoreForValue, selectOperator, selectTile, undo } from './game/engine.ts'
+import {
+  backspace,
+  expireClock,
+  lockIn,
+  pressCloseBracket,
+  pressNumber,
+  pressOpenBracket,
+  pressOperator,
+  scoreForValue,
+  stepCount,
+} from './game/engine.ts'
 import { isPuzzleSolvable } from './game/solver.ts'
 import { ACHIEVEMENTS } from './game/achievements.ts'
 import type { Operator } from './game/types.ts'
@@ -54,7 +64,7 @@ export function App() {
   const { showHomeScreen } = useShowHomeScreen()
   const { classicClock, toggleClassicClock } = useClassicClockSetting()
 
-  const dailyHasStarted = daily.state.selectedId !== null || daily.state.history.length > 0
+  const dailyHasStarted = daily.state.tokens.length > 0
   const dailyIsLocked = daily.state.status === 'locked'
   const dailyTimer = useDailyTimer(dailyHasStarted, dailyIsLocked)
 
@@ -94,7 +104,7 @@ export function App() {
     if (daily.state.status === 'locked' && dailyChallenge.todayResult === null) {
       const target = daily.state.target
       const finalValue = daily.state.finalValue
-      const stepCount = daily.state.history.length
+      const steps = stepCount(daily.state)
       const durationMs = dailyTimer.elapsedMs
       const score = scoreForValue(target, finalValue)
 
@@ -103,14 +113,14 @@ export function App() {
         target,
         finalValue,
         score,
-        stepCount,
+        stepCount: steps,
         solveTimeMs: durationMs,
-        wasSolvable: isPuzzleSolvable(extractOriginalNumbers(daily.state), target),
+        wasSolvable: isPuzzleSolvable(daily.state.tiles.map(tile => tile.value), target),
       })
       playSound(score === 10 ? 'win' : score > 0 ? 'close' : 'miss')
 
       leaderboard.checkDailyQualifies(today, score).then(qualifies => {
-        if (qualifies) setPendingLeaderboardEntry({ target, finalValue, score, stepCount, durationMs })
+        if (qualifies) setPendingLeaderboardEntry({ target, finalValue, score, stepCount: steps, durationMs })
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -240,12 +250,12 @@ export function App() {
             hardMode={hardMode}
             classicClockEnabled={classicClock}
             elapsedMs={isDailyOpen ? dailyTimer.elapsedMs : undefined}
-            onSelectTile={id => activeSetState(selectTile(activeState, id))}
-            onSelectOperator={(op: Operator) => activeSetState(selectOperator(activeState, op))}
-            onUndo={() => activeSetState(undo(activeState))}
-            onLockIn={() => {
-              if (activeState.selectedId !== null) activeSetState(lockIn(activeState, activeState.selectedId))
-            }}
+            onPressNumber={id => activeSetState(pressNumber(activeState, id))}
+            onPressOperator={(op: Operator) => activeSetState(pressOperator(activeState, op))}
+            onPressOpenBracket={() => activeSetState(pressOpenBracket(activeState))}
+            onPressCloseBracket={() => activeSetState(pressCloseBracket(activeState))}
+            onBackspace={() => activeSetState(backspace(activeState))}
+            onLockIn={() => activeSetState(lockIn(activeState))}
             onExpireClock={() => activeSetState(expireClock(activeState))}
           />
           {isResultShowing && (
@@ -254,7 +264,7 @@ export function App() {
               target={activeState.target}
               finalValue={activeState.finalValue}
               score={scoreForValue(activeState.target, activeState.finalValue)}
-              stepCount={activeState.history.length}
+              stepCount={stepCount(activeState)}
               elapsedMs={isDailyOpen ? dailyTimer.elapsedMs : 0}
               dateLabel={isDailyOpen ? formatDateLabel(today) : undefined}
               dailyStreakCount={isDailyOpen ? dailyChallenge.streak.count : undefined}

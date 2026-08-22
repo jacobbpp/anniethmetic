@@ -9,27 +9,41 @@ export type Operator = '+' | '−' | '×' | '÷'
 
 export type GameStatus = 'playing' | 'locked'
 
+// The six original numbers a puzzle is dealt. Unlike the old merge model,
+// these never change value or get replaced — `used` just tracks whether
+// this number has already been placed into the expression.
 export interface Tile {
   id: number
   value: number
-  derived: boolean
+  used: boolean
 }
 
-export interface MergeRecord {
-  a: Tile
-  op: Operator
-  b: Tile
-  result: Tile
+export interface NumberToken {
+  type: 'number'
+  tileId: number
+  value: number
 }
+
+export interface OperatorToken {
+  type: 'operator'
+  op: Operator
+}
+
+export interface OpenBracketToken {
+  type: 'open'
+}
+
+export interface CloseBracketToken {
+  type: 'close'
+}
+
+export type ExpressionToken = NumberToken | OperatorToken | OpenBracketToken | CloseBracketToken
 
 export interface GameState {
   status: GameStatus
-  pool: Tile[]
+  tiles: Tile[]
   target: number
-  history: MergeRecord[]
-  selectedId: number | null
-  pendingOp: Operator | null
-  nextTileId: number
+  tokens: ExpressionToken[]
   finalValue: number | null
 }
 
@@ -41,9 +55,8 @@ export function isGameState(value: unknown): value is GameState {
   const candidate = value as Partial<GameState>
   return (
     typeof candidate.status === 'string' &&
-    Array.isArray(candidate.pool) &&
+    Array.isArray(candidate.tiles) &&
     typeof candidate.target === 'number' &&
-    Array.isArray(candidate.history) &&
-    typeof candidate.nextTileId === 'number'
+    Array.isArray(candidate.tokens)
   )
 }

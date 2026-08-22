@@ -1,34 +1,58 @@
 import { describe, expect, it } from 'vitest'
 import {
+  backspace,
+  canPressCloseBracket,
+  canPressNumber,
+  canPressOpenBracket,
+  canPressOperator,
   createInitialState,
+  evaluateExpression,
   expireClock,
-  extractOriginalNumbers,
   generateNumbers,
   generateTarget,
+  isCompleteExpression,
   lockIn,
-  mergeTiles,
+  pressCloseBracket,
+  pressNumber,
+  pressOpenBracket,
+  pressOperator,
   scoreForValue,
-  selectOperator,
-  selectTile,
-  undo,
+  stepCount,
 } from './engine.ts'
 import { LARGE_NUMBERS, SMALL_NUMBERS, TARGET_MAX, TARGET_MIN, TILE_COUNT } from './types.ts'
 import type { GameState } from './types.ts'
 
-function withPool(values: number[], overrides: Partial<GameState> = {}): GameState {
-  const pool = values.map((value, id) => ({ id, value, derived: false }))
+function withTiles(values: number[], overrides: Partial<GameState> = {}): GameState {
+  const tiles = values.map((value, id) => ({ id, value, used: false }))
   return {
     status: 'playing',
-    pool,
+    tiles,
     target: 500,
-    history: [],
-    selectedId: null,
-    pendingOp: null,
-    nextTileId: values.length,
+    tokens: [],
     finalValue: null,
     ...overrides,
   }
 }
+
+function tileId(state: GameState, value: number): number {
+  return state.tiles.find(t => t.value === value)!.id
+}
+
+// Presses a sequence of tokens by value/operator. Numbers are matched by
+// value against still-unused tiles (fine for these tests since no fixture
+// repeats a value across un-used tiles at the point it's pressed).
+function type(state: GameState, ...actions: (number | Operator | '(' | ')')[]): GameState {
+  let next = state
+  for (const action of actions) {
+    if (action === '(') next = pressOpenBracket(next)
+    else if (action === ')') next = pressCloseBracket(next)
+    else if (typeof action === 'number') next = pressNumber(next, tileId(next, action))
+    else next = pressOperator(next, action)
+  }
+  return next
+}
+
+type Operator = '+' | '−' | '×' | '÷'
 
 describe('generateNumbers', () => {
   it('always draws exactly six tiles', () => {
@@ -38,17 +62,14 @@ describe('generateNumbers', () => {
   })
 
   it('draws at most two large numbers, all from the official large set', () => {
-    // rng() = 0.99 forces the largest possible largeCount (2) every time it's consulted for that draw.
     const numbers = generateNumbers(() => 0.99)
     const largeDrawn = numbers.filter(n => (LARGE_NUMBERS as readonly number[]).includes(n))
     expect(largeDrawn.length).toBeLessThanOrEqual(2)
   })
 
   it('fills the remainder from two-of-each small numbers 1-10', () => {
-    // rng() = 0 forces largeCount to 0, so all six tiles come from the small pool.
     const numbers = generateNumbers(() => 0)
     numbers.forEach(n => expect(SMALL_NUMBERS as readonly number[]).toContain(n))
-    // No small value can appear more than twice, since the pool only has two of each.
     const counts = new Map<number, number>()
     numbers.forEach(n => counts.set(n, (counts.get(n) ?? 0) + 1))
     counts.forEach(count => expect(count).toBeLessThanOrEqual(2))
@@ -63,216 +84,263 @@ describe('generateTarget', () => {
 })
 
 describe('createInitialState', () => {
-  it('starts in playing status with an empty history and no selection', () => {
+  it('starts in playing status with no tokens and every tile unused', () => {
     const state = createInitialState(() => 0.5)
     expect(state.status).toBe('playing')
-    expect(state.history).toEqual([])
-    expect(state.selectedId).toBeNull()
-    expect(state.pendingOp).toBeNull()
+    expect(state.tokens).toEqual([])
     expect(state.finalValue).toBeNull()
-    expect(state.pool).toHaveLength(TILE_COUNT)
+    expect(state.tiles).toHaveLength(TILE_COUNT)
+    expect(state.tiles.every(t => !t.used)).toBe(true)
   })
 })
 
-describe('mergeTiles: order-independent subtraction and division', () => {
-  it('subtracts the lower value from the higher value regardless of tap order', () => {
-    const state = withPool([3, 10])
-    const first = mergeTiles(state, 0, 1, '−')
-    const second = mergeTiles(state, 1, 0, '−')
-    expect(first.pool.find(t => t.derived)?.value).toBe(7)
-    expect(second.pool.find(t => t.derived)?.value).toBe(7)
+describe('grammar validity: what can be pressed next', () => {
+  it('only allows a number or an open bracket at the very start', () => {
+    const state = withTiles([3, 4, 5])
+    expect(canPressNumber(state, tileId(state, 3))).toBe(true)
+    expect(canPressOpenBracket(state)).toBe(true)
+    expect(canPressOperator(state, '+')).toBe(false)
+    expect(canPressCloseBracket(state)).toBe(false)
   })
 
-  it('divides the higher value by the lower value regardless of tap order', () => {
-    const state = withPool([4, 20])
-    const first = mergeTiles(state, 0, 1, '÷')
-    const second = mergeTiles(state, 1, 0, '÷')
-    expect(first.pool.find(t => t.derived)?.value).toBe(5)
-    expect(second.pool.find(t => t.derived)?.value).toBe(5)
+  it('only allows an operator or a close bracket after a number', () => {
+    const state = type(withTiles([3, 4, 5]), 3)
+    expect(canPressOperator(state, '+')).toBe(true)
+    expect(canPressNumber(state, tileId(state, 4))).toBe(false)
+    expect(canPressOpenBracket(state)).toBe(false)
+    expect(canPressCloseBracket(state)).toBe(false) // nothing open to close
+  })
+
+  it('only allows a number or an open bracket after an operator', () => {
+    const state = type(withTiles([3, 4, 5]), 3, '+')
+    expect(canPressNumber(state, tileId(state, 4))).toBe(true)
+    expect(canPressOpenBracket(state)).toBe(true)
+    expect(canPressOperator(state, '×')).toBe(false)
+    expect(canPressCloseBracket(state)).toBe(false)
+  })
+
+  it('never allows an empty bracket pair', () => {
+    const state = type(withTiles([3, 4, 5]), '(')
+    expect(canPressCloseBracket(state)).toBe(false)
+    expect(canPressNumber(state, tileId(state, 3))).toBe(true)
+    expect(canPressOpenBracket(state)).toBe(true)
+  })
+
+  it('does not allow closing a bracket that was never opened', () => {
+    const state = type(withTiles([3, 4, 5]), 3)
+    expect(canPressCloseBracket(state)).toBe(false)
+  })
+
+  it('allows closing once a number sits inside an open bracket', () => {
+    const state = type(withTiles([3, 4, 5]), '(', 3)
+    expect(canPressCloseBracket(state)).toBe(true)
+  })
+
+  it('does not allow re-using an already-placed tile', () => {
+    const state = type(withTiles([3, 4, 5]), 3, '+')
+    expect(canPressNumber(state, tileId(state, 3))).toBe(false)
   })
 })
 
-describe('mergeTiles: rejection rules', () => {
-  it('rejects a subtraction that would produce zero, leaving the state unchanged', () => {
-    const state = withPool([7, 7], { selectedId: 0, pendingOp: '−' })
-    const next = mergeTiles(state, 0, 1, '−')
-    expect(next).toBe(state)
-    expect(next.pool).toHaveLength(2)
+describe('evaluateExpression: precedence and brackets', () => {
+  it('applies standard precedence: multiplication before addition', () => {
+    const state = type(withTiles([2, 3, 4]), 2, '+', 3, '×', 4)
+    expect(evaluateExpression(state.tokens)).toBe(14) // 2 + (3×4), not (2+3)×4
   })
 
-  it('rejects a division that does not divide evenly, leaving the state unchanged', () => {
-    const state = withPool([5, 7], { selectedId: 0, pendingOp: '÷' })
-    const next = mergeTiles(state, 0, 1, '÷')
-    expect(next).toBe(state)
+  it('applies standard precedence: division before subtraction', () => {
+    const state = type(withTiles([20, 10, 2]), 20, '−', 10, '÷', 2)
+    expect(evaluateExpression(state.tokens)).toBe(15) // 20 − (10÷2)
   })
 
-  it('rejects division by zero even though 0 never appears as a drawn tile, defensively', () => {
-    const state = withPool([0, 7])
-    const next = mergeTiles(state, 0, 1, '÷')
-    expect(next).toBe(state)
+  it('brackets override precedence', () => {
+    const state = type(withTiles([2, 3, 4]), '(', 2, '+', 3, ')', '×', 4)
+    expect(evaluateExpression(state.tokens)).toBe(20) // (2+3)×4
   })
 
-  it('still allows addition and multiplication of equal tiles', () => {
-    const addState = withPool([7, 7])
-    expect(mergeTiles(addState, 0, 1, '+').pool.find(t => t.derived)?.value).toBe(14)
-    const mulState = withPool([7, 7])
-    expect(mergeTiles(mulState, 0, 1, '×').pool.find(t => t.derived)?.value).toBe(49)
+  it('evaluates a lone number with no operations as itself', () => {
+    const state = type(withTiles([7, 3]), 7)
+    expect(evaluateExpression(state.tokens)).toBe(7)
+  })
+
+  it('returns null for an incomplete expression (dangling operator)', () => {
+    const state = type(withTiles([3, 4]), 3, '+')
+    expect(isCompleteExpression(state.tokens)).toBe(false)
+    expect(evaluateExpression(state.tokens)).toBeNull()
+  })
+
+  it('returns null for an incomplete expression (unclosed bracket)', () => {
+    const state = type(withTiles([3, 4]), '(', 3, '+', 4)
+    expect(isCompleteExpression(state.tokens)).toBe(false)
+    expect(evaluateExpression(state.tokens)).toBeNull()
   })
 })
 
-describe('mergeTiles: auto-lock', () => {
-  it('locks in immediately the instant a merge lands exactly on target', () => {
-    const state = withPool([100, 87], { target: 187 })
-    const next = mergeTiles(state, 0, 1, '+')
-    expect(next.status).toBe('locked')
-    expect(next.finalValue).toBe(187)
+describe('positive-integer-only intermediate steps', () => {
+  it('rejects an operator press that would force reducing a negative pending subtraction', () => {
+    // 15 − 20 pending; "+" is the same precedence as "−", so pressing it
+    // would force reducing 15−20 = −5 right now.
+    const state = type(withTiles([15, 20, 5]), 15, '−', 20)
+    expect(canPressOperator(state, '+')).toBe(false)
+    expect(canPressOperator(state, '−')).toBe(false)
+    // A higher-precedence operator doesn't force the reduction yet, so it's fine.
+    expect(canPressOperator(state, '×')).toBe(true)
   })
 
-  it('does not lock when the merge misses the target', () => {
-    const state = withPool([100, 50], { target: 187 })
-    const next = mergeTiles(state, 0, 1, '+')
-    expect(next.status).toBe('playing')
-    expect(next.finalValue).toBeNull()
+  it('rejects a close bracket that would force reducing a negative result', () => {
+    const state = type(withTiles([15, 20]), '(', 15, '−', 20)
+    expect(canPressCloseBracket(state)).toBe(false)
   })
 
-  it('rejects further merges once locked', () => {
-    const locked = withPool([187], { status: 'locked', finalValue: 187, target: 187 })
-    const extra = withPool([5], { status: 'locked', finalValue: 187, target: 187 }).pool[0]
-    locked.pool.push(extra)
-    const next = mergeTiles(locked, locked.pool[0].id, locked.pool[1].id, '+')
+  it('rejects a close bracket that exposes an invalid pending max-precedence division', () => {
+    // 5 ÷ (3 − 1): closing the bracket resolves 3−1=2 (fine on its own),
+    // but that immediately exposes the pending ÷'s now-fixed right operand
+    // — 5÷2 is non-exact, and ÷ is max-precedence so nothing later could
+    // ever rescue it. The close-bracket press itself must be rejected, not
+    // just silently fail to evaluate afterward.
+    const state = type(withTiles([5, 3, 1]), 5, '÷', '(', 3, '−', 1)
+    expect(canPressCloseBracket(state)).toBe(false)
+    const after = pressCloseBracket(state)
+    expect(after).toBe(state)
+  })
+
+  it('rejects a non-exact division', () => {
+    const state = type(withTiles([7, 3]), 7)
+    expect(canPressOperator(state, '÷')).toBe(true)
+    const withOp = pressOperator(state, '÷')
+    // 7 ÷ 3 is non-exact and unrecoverable (÷ is max precedence, so nothing
+    // can ever defer it) — the number press itself must be rejected.
+    expect(canPressNumber(withOp, tileId(withOp, 3))).toBe(false)
+    const after = pressNumber(withOp, tileId(withOp, 3))
+    expect(after).toBe(withOp)
+  })
+
+  it('allows placing a number after a lower-precedence subtraction even when stopping there would be invalid, since a later divide/multiply could still rescue it', () => {
+    // 5 − 10 alone would be invalid, but − is not max-precedence, so a
+    // following "÷ 10" (giving 5 − 1 = 4) is a legitimate way to continue —
+    // the number press must not be rejected up front the way 7÷3 was.
+    const state = type(withTiles([5, 10]), 5, '−')
+    expect(canPressNumber(state, tileId(state, 10))).toBe(true)
+    const withNumber = pressNumber(state, tileId(state, 10))
+    expect(withNumber.tokens).toHaveLength(3)
+    // But locking in right here must still fail, since 5−10 alone is invalid.
+    expect(evaluateExpression(withNumber.tokens)).toBeNull()
+  })
+
+  it('allows a subtraction that looks backwards at the token level but resolves validly through brackets', () => {
+    // 10 − (20 − 15) = 10 − 5 = 5: each individual reduction is a positive
+    // integer, even though 10 − 20 alone would not be.
+    const state = type(withTiles([10, 20, 15]), 10, '−', '(', 20, '−', 15, ')')
+    expect(evaluateExpression(state.tokens)).toBe(5)
+  })
+
+  it('lets addition and multiplication of any two positive numbers through unconditionally', () => {
+    const state = type(withTiles([7, 7]), 7)
+    expect(canPressOperator(state, '+')).toBe(true)
+    expect(canPressOperator(state, '×')).toBe(true)
+  })
+})
+
+describe('auto-lock', () => {
+  it('locks in immediately the instant a number completes an exact match', () => {
+    const state = type(withTiles([100, 87], { target: 187 }), 100, '+', 87)
+    expect(state.status).toBe('locked')
+    expect(state.finalValue).toBe(187)
+  })
+
+  it('locks in immediately the instant a close bracket completes an exact match', () => {
+    // 70 + (50 − 20) = 70 + 30 = 100 — the close bracket is the token that
+    // completes the expression, not a following number.
+    const state = type(withTiles([70, 50, 20], { target: 100 }), 70, '+', '(', 50, '−', 20, ')')
+    expect(state.status).toBe('locked')
+    expect(state.finalValue).toBe(100)
+  })
+
+  it('does not lock when the expression misses the target', () => {
+    const state = type(withTiles([100, 50], { target: 187 }), 100, '+', 50)
+    expect(state.status).toBe('playing')
+    expect(state.finalValue).toBeNull()
+  })
+
+  it('rejects further presses once locked', () => {
+    const locked = type(withTiles([100, 87], { target: 187 }), 100, '+', 87)
+    expect(locked.status).toBe('locked')
+    const next = pressNumber(locked, tileId(locked, 87))
     expect(next).toBe(locked)
   })
 })
 
-describe('selectTile and selectOperator', () => {
-  it('selects a tile, arms an operator, then merges on selecting a second tile', () => {
-    let state = withPool([3, 4])
-    state = selectTile(state, 0)
-    expect(state.selectedId).toBe(0)
-    state = selectOperator(state, '+')
-    expect(state.pendingOp).toBe('+')
-    state = selectTile(state, 1)
-    expect(state.pool.find(t => t.derived)?.value).toBe(7)
-    expect(state.pendingOp).toBeNull()
+describe('backspace', () => {
+  it('removes the last token and frees its tile if it was a number', () => {
+    let state = type(withTiles([3, 4, 5]), 3, '+', 4)
+    state = backspace(state)
+    expect(state.tokens).toHaveLength(2) // back to "3 +"
+    expect(state.tiles.find(t => t.value === 4)!.used).toBe(false)
+    expect(canPressNumber(state, tileId(state, 4))).toBe(true) // last token is the operator again
   })
 
-  it('deselects when the same tile is tapped again, even with a pending operator', () => {
-    let state = withPool([3, 4])
-    state = selectTile(state, 0)
-    state = selectOperator(state, '+')
-    state = selectTile(state, 0)
-    expect(state.selectedId).toBeNull()
-    expect(state.pendingOp).toBeNull()
+  it('removes a trailing operator without touching any tile', () => {
+    let state = type(withTiles([3, 4, 5]), 3, '+')
+    state = backspace(state)
+    expect(state.tokens).toHaveLength(1)
+    expect(state.tiles.find(t => t.value === 3)!.used).toBe(true)
   })
 
-  it('switches selection to a new tile when no operator is pending yet', () => {
-    let state = withPool([3, 4, 5])
-    state = selectTile(state, 0)
-    state = selectTile(state, 1)
-    expect(state.selectedId).toBe(1)
+  it('is a no-op on an empty expression', () => {
+    const state = withTiles([3, 4])
+    expect(backspace(state)).toBe(state)
   })
 
-  it('toggles an operator off when tapped a second time', () => {
-    let state = withPool([3, 4])
-    state = selectTile(state, 0)
-    state = selectOperator(state, '+')
-    state = selectOperator(state, '+')
-    expect(state.pendingOp).toBeNull()
-  })
-})
-
-describe('undo', () => {
-  it('restores both source tiles and removes the merged result', () => {
-    let state = withPool([3, 4, 10])
-    state = selectTile(state, 0)
-    state = selectOperator(state, '+')
-    state = selectTile(state, 1)
-    expect(state.pool.map(t => t.value).sort((a, b) => a - b)).toEqual([7, 10])
-
-    state = undo(state)
-    expect(state.pool.map(t => t.value).sort((a, b) => a - b)).toEqual([3, 4, 10])
-    expect(state.history).toHaveLength(0)
-    expect(state.selectedId).toBeNull()
-  })
-
-  it('is a no-op when there is no history', () => {
-    const state = withPool([3, 4])
-    expect(undo(state)).toBe(state)
-  })
-
-  it('is a no-op once the game is locked', () => {
-    let state = withPool([100, 87], { target: 187 })
-    state = mergeTiles(state, 0, 1, '+')
-    expect(state.status).toBe('locked')
-    expect(undo(state)).toBe(state)
+  it('is a no-op once locked', () => {
+    const state = type(withTiles([100, 87], { target: 187 }), 100, '+', 87)
+    expect(backspace(state)).toBe(state)
   })
 })
 
 describe('lockIn', () => {
-  it('locks in an original tile with no operations performed at all', () => {
-    const state = withPool([3, 4, 5], { target: 500 })
-    const next = lockIn(state, 1)
+  it('locks in a single original tile with no operations at all', () => {
+    const state = type(withTiles([3, 4, 5], { target: 500 }), 4)
+    const next = lockIn(state)
     expect(next.status).toBe('locked')
     expect(next.finalValue).toBe(4)
   })
 
-  it('locks in a derived tile built from merges', () => {
-    let state = withPool([3, 4], { target: 500 })
-    state = selectTile(state, 0)
-    state = selectOperator(state, '+')
-    state = selectTile(state, 1)
-    const derivedId = state.pool.find(t => t.derived)!.id
-    const next = lockIn(state, derivedId)
+  it('locks in a complete multi-token expression', () => {
+    const state = type(withTiles([3, 4], { target: 500 }), 3, '+', 4)
+    const next = lockIn(state)
     expect(next.status).toBe('locked')
     expect(next.finalValue).toBe(7)
   })
 
+  it('is a no-op when the expression is incomplete', () => {
+    const state = type(withTiles([3, 4], { target: 500 }), 3, '+')
+    expect(lockIn(state)).toBe(state)
+  })
+
   it('is a no-op once already locked', () => {
-    let state = withPool([100, 87], { target: 187 })
-    state = mergeTiles(state, 0, 1, '+')
-    expect(lockIn(state, state.pool[0].id)).toBe(state)
+    const state = type(withTiles([100, 87], { target: 187 }), 100, '+', 87)
+    expect(lockIn(state)).toBe(state)
   })
 })
 
 describe('expireClock', () => {
-  it('auto-submits the selected tile as the final answer', () => {
-    let state = withPool([3, 4, 5], { target: 500 })
-    state = selectTile(state, 1)
-    state = expireClock(state)
-    expect(state.status).toBe('locked')
-    expect(state.finalValue).toBe(4)
+  it('locks in the current value when the expression is complete', () => {
+    const state = type(withTiles([3, 4], { target: 500 }), 3, '+', 4)
+    const next = expireClock(state)
+    expect(next.status).toBe('locked')
+    expect(next.finalValue).toBe(7)
   })
 
-  it('ends the round with no final value when nothing is selected', () => {
-    const state = withPool([3, 4, 5], { target: 500 })
+  it('ends the round with no final value when the expression is incomplete', () => {
+    const state = type(withTiles([3, 4], { target: 500 }), 3, '+')
     const next = expireClock(state)
     expect(next.status).toBe('locked')
     expect(next.finalValue).toBeNull()
   })
 
   it('is a no-op once already locked', () => {
-    let state = withPool([100, 87], { target: 187 })
-    state = mergeTiles(state, 0, 1, '+')
+    const state = type(withTiles([100, 87], { target: 187 }), 100, '+', 87)
     expect(expireClock(state)).toBe(state)
-  })
-})
-
-describe('extractOriginalNumbers', () => {
-  it('returns the untouched pool when no merges have happened', () => {
-    const state = withPool([3, 4, 5, 6, 10, 25])
-    expect(extractOriginalNumbers(state).sort((a, b) => a - b)).toEqual([3, 4, 5, 6, 10, 25])
-  })
-
-  it('reconstructs every original after several merges, including a chain of derived tiles', () => {
-    let state = withPool([100, 50, 5, 6, 10, 9], { target: 131 })
-    state = selectTile(state, 0) // 100
-    state = selectOperator(state, '+')
-    state = selectTile(state, 1) // 50 -> merges to 150
-    const derivedId = state.pool.find(t => t.derived)!.id
-    state = selectTile(state, derivedId) // 150
-    state = selectOperator(state, '−')
-    state = selectTile(state, state.pool.find(t => t.value === 10)!.id) // 150 - 10 = 140
-    expect(extractOriginalNumbers(state).sort((a, b) => a - b)).toEqual([5, 6, 9, 10, 50, 100])
   })
 })
 
@@ -298,5 +366,17 @@ describe('scoreForValue: scoring bands with exact boundaries', () => {
 
   it('scores no final value as 0', () => {
     expect(scoreForValue(500, null)).toBe(0)
+  })
+})
+
+describe('stepCount', () => {
+  it('counts zero operations for a locked-in single number', () => {
+    const state = type(withTiles([4, 5], { target: 500 }), 4)
+    expect(stepCount(state)).toBe(0)
+  })
+
+  it('counts one operator per operation regardless of brackets', () => {
+    const state = type(withTiles([70, 50, 20], { target: 100 }), 70, '+', '(', 50, '−', 20, ')')
+    expect(stepCount(state)).toBe(2)
   })
 })

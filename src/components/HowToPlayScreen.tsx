@@ -31,20 +31,20 @@ export function HowToPlayScreen({ onClose }: HowToPlayScreenProps) {
           </div>
           <div className="howto-step">
             <span className="howto-step__n">2</span>
-            <h3 className="howto-step__title">Tap to merge</h3>
+            <h3 className="howto-step__title">Type a real equation</h3>
             <p className="howto-step__body">
-              Tap a number, tap an operator (+, −, ×, ÷), then tap a second number. The two combine into a new
-              tile that goes back in the pool, ready to merge again. No brackets needed — the order you merge in
-              does the work.
+              Tap numbers, operators (+, −, ×, ÷) and brackets to build one equation, same rules as school
+              maths (BIDMAS/BODMAS) — × and ÷ happen before + and −, and brackets override that order. You
+              don't have to use every number, and no operation is required at all.
             </p>
           </div>
           <div className="howto-step">
             <span className="howto-step__n">3</span>
-            <h3 className="howto-step__title">− and ÷ never fail on tap order</h3>
+            <h3 className="howto-step__title">Every step must stay a whole, positive number</h3>
             <p className="howto-step__body">
-              Subtraction and division always take the bigger number first, whichever tile you tapped. A
-              subtraction landing on zero, or a division that doesn't divide evenly, just won't go through — try
-              a different pair.
+              Same as the real show: no negative numbers and no fractions allowed at any point along the way,
+              only the final answer can be anything. A button greys out the moment pressing it would break that
+              rule — try wrapping things in brackets instead.
             </p>
           </div>
           <div className="howto-step">
@@ -52,7 +52,7 @@ export function HowToPlayScreen({ onClose }: HowToPlayScreenProps) {
             <h3 className="howto-step__title">Lock in whenever you're ready</h3>
             <p className="howto-step__body">
               Land on the target exactly and you lock in automatically — nothing left to decide. Otherwise, lock
-              in any tile at any time as your answer, even one of the original six with no merges at all.
+              in your equation at any time as your answer, even a single number with no operations at all.
             </p>
           </div>
           <div className="howto-step">

@@ -4,16 +4,15 @@ const TICK_MS = 250
 
 // Stopwatch for the daily puzzle's solve time.
 //
-// `hasStarted` should be `state.selectedId !== null || state.history.length > 0`
-// (true from the player's first tile selection) and `isLocked` should be
-// `state.status === 'locked'`.
+// `hasStarted` should be `state.tokens.length > 0` (true from the player's
+// first key press) and `isLocked` should be `state.status === 'locked'`.
 export function useDailyTimer(hasStarted: boolean, isLocked: boolean): { elapsedMs: number } {
   const [elapsedMs, setElapsedMs] = useState(0)
   const startedAtRef = useRef<number | null>(null)
   const lockedAtRef = useRef<number | null>(null)
   // One-shot latch: once `hasStarted` has been true, this stays true even if
-  // `hasStarted` later goes back to false (e.g. an undo clears the current
-  // selection). The stopwatch must not re-arm or reset once play has begun.
+  // `hasStarted` later goes back to false (e.g. backspacing away every typed
+  // token). The stopwatch must not re-arm or reset once play has begun.
   const hasStartedOnceRef = useRef(false)
 
   useEffect(() => {

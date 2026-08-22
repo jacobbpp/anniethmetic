@@ -79,13 +79,13 @@ describe('createDailyGame', () => {
     const first = createDailyGame('2026-08-20')
     const second = createDailyGame('2026-08-20')
     expect(first.target).toBe(second.target)
-    expect(first.pool.map(t => t.value)).toEqual(second.pool.map(t => t.value))
+    expect(first.tiles.map(t => t.value)).toEqual(second.tiles.map(t => t.value))
   })
 
   it('produces a different puzzle for a different date', () => {
     const a = createDailyGame('2026-08-20')
     const b = createDailyGame('2026-08-21')
-    const same = a.target === b.target && JSON.stringify(a.pool.map(t => t.value)) === JSON.stringify(b.pool.map(t => t.value))
+    const same = a.target === b.target && JSON.stringify(a.tiles.map(t => t.value)) === JSON.stringify(b.tiles.map(t => t.value))
     expect(same).toBe(false)
   })
 })
