@@ -18,7 +18,7 @@ export interface ResultScreenProps {
 function solvabilityNote(score: number, wasSolvable: boolean): string {
   if (score === 10) return ''
   return wasSolvable
-    ? 'There was an exact hit today — worth a hunt next time.'
+    ? 'There was an exact hit today. Worth a hunt next time.'
     : 'No exact hit was possible today, so getting close was the best anyone could do.'
 }
 
@@ -65,7 +65,7 @@ export function ResultScreen({
       <div className={`overlay__card overlay__card--${band}`}>
         <h2 className="overlay__title">{titleForBand(band)}</h2>
         <p className="overlay__score">
-          {finalValue ?? '—'} vs {target}
+          {finalValue ?? '–'} vs {target}
         </p>
         <p className="overlay__subtitle">
           {score} pts · {pluralizeStep(stepCount)} · {formatElapsedTime(elapsedMs)}

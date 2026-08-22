@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { App } from './App.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'
 import './brand/tokens.css'
+import './brand/components.css'
 import './index.css'
 
 createRoot(document.getElementById('root')!).render(

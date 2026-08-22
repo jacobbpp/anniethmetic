@@ -58,7 +58,7 @@ describe('HomeScreen', () => {
     expect(screen.queryByText('New')).not.toBeInTheDocument()
     expect(screen.getByText('Today: 10 pts in 3 steps')).toBeInTheDocument()
 
-    const playedButton = screen.getByRole('button', { name: 'Played — nice one' })
+    const playedButton = screen.getByRole('button', { name: 'Played, nice one' })
     expect(playedButton).toBeDisabled()
   })
 
@@ -95,7 +95,7 @@ describe('HomeScreen', () => {
     fireEvent.click(screen.getByRole('button', { name: 'See all stats →' }))
     expect(props.onOpenStats).toHaveBeenCalledOnce()
 
-    fireEvent.click(screen.getByRole('button', { name: '🏆 3/9 achievements' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Achievements' }))
     expect(props.onOpenAchievements).toHaveBeenCalledOnce()
 
     fireEvent.click(screen.getByRole('button', { name: 'How to play' }))
@@ -116,7 +116,7 @@ describe('HomeScreen', () => {
 
   it('shows the average score to 1 decimal place, or a dash with no games played', () => {
     renderHomeScreen({ stats: createEmptyStats() })
-    expect(screen.getByText('—')).toBeInTheDocument()
+    expect(screen.getByText('–')).toBeInTheDocument()
 
     cleanup()
 

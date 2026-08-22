@@ -150,7 +150,7 @@ describe('StatsScreen: free play vs daily split', () => {
     )
     fireEvent.click(screen.getByText('Score average & distribution'))
     // populatedStats(): one free-play (score 10), one daily (score 7), one free-play (score 0) — 2 free play, 1 daily.
-    expect(screen.getByText('3 games played — 2 free play, 1 daily')).toBeInTheDocument()
+    expect(screen.getByText('3 games played: 2 free play, 1 daily')).toBeInTheDocument()
   })
 })
 

@@ -1,22 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
+import { ScreenHeader } from './ScreenHeader.tsx'
+import { ChevronIcon } from './icons.tsx'
 
 const RESET_CONFIRM_TIMEOUT_MS = 3000
-
-function BackIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M15 18l-6-6 6-6" />
-    </svg>
-  )
-}
-
-function ChevronIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M9 6l6 6-6 6" />
-    </svg>
-  )
-}
 
 export interface SettingsScreenProps {
   muted: boolean
@@ -83,12 +69,7 @@ export function SettingsScreen({
 
   return (
     <div className="screen">
-      <div className="screen__header">
-        <button type="button" className="icon-btn" onClick={onClose} aria-label="Back to game">
-          <BackIcon />
-        </button>
-        <span className="screen__title">Settings</span>
-      </div>
+      <ScreenHeader title="Settings" backLabel="Back to game" onBack={onClose} />
       <div className="screen__body">
         <div className="settings-row">
           <span className="settings-row__label">
@@ -146,7 +127,7 @@ export function SettingsScreen({
           <span className="settings-row__label">
             Classic clock
             <span className="settings-row__state">
-              Optional 30-second countdown, a nod to the show — doesn't replace daily scoring.
+              Optional 30-second countdown, a nod to the show, but it doesn't replace daily scoring.
             </span>
           </span>
           <button

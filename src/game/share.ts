@@ -32,8 +32,8 @@ function pluralize(count: number, noun: string): string {
 
 function buildHeadline(prefix: string, params: ShareParams): string {
   const { target, finalValue, score, stepCount, elapsedMs } = params
-  const valueLabel = finalValue ?? '—'
-  return `${prefix} — ${valueLabel} vs ${target} (${score} pts, ${pluralize(stepCount, 'step')}, ${formatElapsedTime(elapsedMs)})`
+  const valueLabel = finalValue ?? '–'
+  return `${prefix} · ${valueLabel} vs ${target} (${score} pts, ${pluralize(stepCount, 'step')}, ${formatElapsedTime(elapsedMs)})`
 }
 
 // Always at least one emoji: locking in an original tile with zero merges

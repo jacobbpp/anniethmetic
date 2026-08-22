@@ -30,7 +30,7 @@ export function LeaderboardPrompt({ rememberedName, onSave, onSkip }: Leaderboar
           </button>
           <button
             type="button"
-            className="btn btn--primary"
+            className="btn btn--cta"
             onClick={() => onSave(trimmed)}
             disabled={trimmed.length === 0}
           >

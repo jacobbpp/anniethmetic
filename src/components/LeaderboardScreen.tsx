@@ -1,14 +1,8 @@
 import { useEffect, useState } from 'react'
 import { formatElapsedTime } from '../game/share.ts'
 import type { LeaderboardEntry, StreakEntry } from '../hooks/useLeaderboard.ts'
-
-function BackIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M15 18l-6-6 6-6" />
-    </svg>
-  )
-}
+import { ScreenHeader } from './ScreenHeader.tsx'
+import { FlameIcon } from './icons.tsx'
 
 type Mode = 'daily' | 'streaks'
 
@@ -55,12 +49,7 @@ export function LeaderboardScreen({
 
   return (
     <div className="screen">
-      <div className="screen__header">
-        <button type="button" className="icon-btn" onClick={onClose} aria-label="Back to game">
-          <BackIcon />
-        </button>
-        <span className="screen__title">Leaderboard</span>
-      </div>
+      <ScreenHeader title="Leaderboard" backLabel="Back to game" onBack={onClose} />
       <div className="screen__body">
         <div className="heatmap-toggle leaderboard-toggle">
           <button
@@ -122,7 +111,9 @@ export function LeaderboardScreen({
                       {entry.name}
                       {isYou ? ' · you' : ''}
                     </span>
-                    <span className="leaderboard-row__score">🔥 {entry.streakCount}</span>
+                    <span className="leaderboard-row__score">
+                      <FlameIcon /> {entry.streakCount}
+                    </span>
                   </div>
                 </li>
               )

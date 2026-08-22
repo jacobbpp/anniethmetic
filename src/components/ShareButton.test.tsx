@@ -16,12 +16,12 @@ describe('ShareButton', () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.assign(navigator, { clipboard: { writeText } })
 
-    render(<ShareButton text="tb·dev Anniethmetic — 187 vs 190 (7 pts, 3 steps, 0:42)" />)
+    render(<ShareButton text="tb·dev Anniethmetic · 187 vs 190 (7 pts, 3 steps, 0:42)" />)
     fireEvent.click(screen.getByRole('button', { name: 'Share' }))
 
     await screen.findByRole('button', { name: 'Copied' })
     expect(writeText).toHaveBeenCalledOnce()
-    expect(writeText).toHaveBeenCalledWith('tb·dev Anniethmetic — 187 vs 190 (7 pts, 3 steps, 0:42)')
+    expect(writeText).toHaveBeenCalledWith('tb·dev Anniethmetic · 187 vs 190 (7 pts, 3 steps, 0:42)')
   })
 
   it('flips the label to "Copied" right after a successful copy', async () => {

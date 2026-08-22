@@ -154,7 +154,7 @@ export function GameScreen({
         <button type="button" className="btn btn--ghost" onClick={onBackspace} disabled={locked || state.tokens.length === 0}>
           Backspace
         </button>
-        <button type="button" className="btn btn--primary" onClick={onLockIn} disabled={locked || liveValue === null}>
+        <button type="button" className="btn btn--cta" onClick={onLockIn} disabled={locked || liveValue === null}>
           Lock in answer
         </button>
       </div>

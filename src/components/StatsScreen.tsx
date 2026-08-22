@@ -4,24 +4,10 @@ import type { StatsData } from '../game/stats.ts'
 import { averageSolveTimeMs, bestSolveTimeMs, buildCalendarDays, solvabilityBreakdown } from '../game/daily.ts'
 import type { CalendarDay, DailyResult, StreakData } from '../game/daily.ts'
 import { formatElapsedTime } from '../game/share.ts'
+import { ScreenHeader } from './ScreenHeader.tsx'
+import { ChevronIcon } from './icons.tsx'
 
 type StatsSection = 'menu' | 'score' | 'streak' | 'time' | 'winrate'
-
-function BackIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M15 18l-6-6 6-6" />
-    </svg>
-  )
-}
-
-function ChevronRightIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M9 18l6-6-6-6" />
-    </svg>
-  )
-}
 
 export interface StatsScreenProps {
   stats: StatsData
@@ -58,7 +44,7 @@ function pluralize(count: number, noun: string): string {
 
 function gamesSplitCaption(stats: StatsData): string {
   const freePlay = freePlayGamesCount(stats)
-  return `${pluralize(stats.totalGames, 'game')} played — ${freePlay} free play, ${stats.dailyGames} daily`
+  return `${pluralize(stats.totalGames, 'game')} played: ${freePlay} free play, ${stats.dailyGames} daily`
 }
 
 function streakPreview(dailyStreak: StreakData): string {
@@ -88,7 +74,7 @@ function MenuRow({ title, preview, onClick }: MenuRowProps) {
         <span className="menu-row-title">{title}</span>
         <span className="menu-row-preview">{preview}</span>
       </span>
-      <ChevronRightIcon />
+      <ChevronIcon />
     </button>
   )
 }
@@ -109,7 +95,7 @@ function ScoreSection({ stats, dailyHistory }: { stats: StatsData; dailyHistory:
       )}
       <div className="stats-hero-row">
         <div className="stats-hero">
-          <p className="stats-hero__value">{avg === null ? '—' : avg.toFixed(1)}</p>
+          <p className="stats-hero__value">{avg === null ? '–' : avg.toFixed(1)}</p>
           <p className="stats-hero__label">average score</p>
         </div>
       </div>
@@ -128,7 +114,7 @@ function ScoreSection({ stats, dailyHistory }: { stats: StatsData; dailyHistory:
       </div>
       {solvedDays > 0 && (
         <p style={{ fontSize: 12, color: 'var(--text-dim)', textAlign: 'center' }}>
-          {solvableCount} of your {solvedDays} daily puzzle{solvedDays === 1 ? '' : 's'} had an exact solution — you
+          {solvableCount} of your {solvedDays} daily puzzle{solvedDays === 1 ? '' : 's'} had an exact solution, and you
           found it {exactOnSolvableCount} of those times.
           {unsolvableCount > 0 &&
             ` The other ${unsolvableCount} had no exact hit possible, same as the real show.`}
@@ -191,11 +177,11 @@ function TimeSection({ history }: { history: DailyResult[] }) {
     <>
       <div className="stats-hero-row">
         <div className="stats-hero">
-          <p className="stats-hero__value">{avg === null ? '—' : formatElapsedTime(avg)}</p>
+          <p className="stats-hero__value">{avg === null ? '–' : formatElapsedTime(avg)}</p>
           <p className="stats-hero__label">average solve time</p>
         </div>
         <div className="stats-hero">
-          <p className="stats-hero__value">{best === null ? '—' : formatElapsedTime(best)}</p>
+          <p className="stats-hero__value">{best === null ? '–' : formatElapsedTime(best)}</p>
           <p className="stats-hero__label">best solve time</p>
         </div>
       </div>
@@ -210,7 +196,7 @@ function WinRateSection({ stats }: { stats: StatsData }) {
     <>
       <div className="stats-hero-row">
         <div className="stats-hero">
-          <p className="stats-hero__value">{rate === null ? '—' : `${rate}%`}</p>
+          <p className="stats-hero__value">{rate === null ? '–' : `${rate}%`}</p>
           <p className="stats-hero__label">win rate</p>
         </div>
         <div className="stats-hero">
@@ -239,17 +225,11 @@ export function StatsScreen({ stats, dailyStreak, dailyHistory, today, onClose }
 
   return (
     <div className="screen">
-      <div className="screen__header">
-        <button
-          type="button"
-          className="icon-btn"
-          onClick={handleBack}
-          aria-label={section === 'menu' ? 'Back to game' : 'Back to stats'}
-        >
-          <BackIcon />
-        </button>
-        <span className="screen__title">{sectionTitle(section)}</span>
-      </div>
+      <ScreenHeader
+        title={sectionTitle(section)}
+        backLabel={section === 'menu' ? 'Back to game' : 'Back to stats'}
+        onBack={handleBack}
+      />
       <div className="screen__body">
         {section === 'menu' && (
           <>
