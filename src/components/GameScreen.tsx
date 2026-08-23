@@ -1,5 +1,6 @@
 import {
   canPressCloseBracket,
+  canPressEquals,
   canPressNumber,
   canPressOpenBracket,
   canPressOperator,
@@ -22,6 +23,7 @@ interface GameScreenProps {
   onPressOperator: (op: Operator) => void
   onPressOpenBracket: () => void
   onPressCloseBracket: () => void
+  onPressEquals: () => void
   onBackspace: () => void
   onLockIn: () => void
   onExpireClock: () => void
@@ -61,6 +63,7 @@ export function GameScreen({
   onPressOperator,
   onPressOpenBracket,
   onPressCloseBracket,
+  onPressEquals,
   onBackspace,
   onLockIn,
   onExpireClock,
@@ -133,6 +136,18 @@ export function GameScreen({
           aria-label="Close bracket"
         >
           )
+        </button>
+        <button
+          type="button"
+          className="game-op"
+          // Collapsing would show the computed value in the always-visible
+          // expression display, defeating hard mode's whole point — same
+          // reason the "= liveValue" hint line is hidden below.
+          disabled={locked || hardMode || !canPressEquals(state)}
+          onClick={onPressEquals}
+          aria-label="Collapse to one number"
+        >
+          =
         </button>
       </div>
 

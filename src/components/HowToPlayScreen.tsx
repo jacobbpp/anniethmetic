@@ -38,6 +38,16 @@ export function HowToPlayScreen({ onClose }: HowToPlayScreenProps) {
           </div>
           <div className="howto-step">
             <span className="howto-step__n">4</span>
+            <h3 className="howto-step__title">Collapse a part of your equation with =</h3>
+            <p className="howto-step__body">
+              Typed a complete bit like "25 × 10"? Tap = and it flattens into a single 250 you can keep building
+              on with more numbers and operators, just like combining two tiles used to work. Or skip it
+              entirely and keep typing the whole thing out with brackets instead. Either way gets you there.
+              Turned off in hard mode, since it'd give away the running total.
+            </p>
+          </div>
+          <div className="howto-step">
+            <span className="howto-step__n">5</span>
             <h3 className="howto-step__title">Lock in whenever you're ready</h3>
             <p className="howto-step__body">
               Land on the target exactly and you lock in automatically. Nothing left to decide. Otherwise, lock
@@ -45,7 +55,7 @@ export function HowToPlayScreen({ onClose }: HowToPlayScreenProps) {
             </p>
           </div>
           <div className="howto-step">
-            <span className="howto-step__n">5</span>
+            <span className="howto-step__n">6</span>
             <h3 className="howto-step__title">Scoring</h3>
             <p className="howto-step__body">
               Exact target: 10 points. Within 5: 7 points. Within 10: 5 points. Any further off: nought. Same as
@@ -53,7 +63,7 @@ export function HowToPlayScreen({ onClose }: HowToPlayScreenProps) {
             </p>
           </div>
           <div className="howto-step">
-            <span className="howto-step__n">6</span>
+            <span className="howto-step__n">7</span>
             <h3 className="howto-step__title">One a day</h3>
             <p className="howto-step__body">
               Everyone gets the same six numbers and the same target each day. Score comes first for ranking,

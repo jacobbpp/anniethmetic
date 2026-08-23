@@ -279,16 +279,48 @@ export function pressCloseBracket(state: GameState): GameState {
   return checkAutoLock({ ...state, tokens })
 }
 
-// Removes the last typed token, freeing its tile back up if it was a number.
+// Removes the last typed token, freeing its tile back up if it was a
+// number. Backspacing a collapsed value (see pressEquals) un-collapses it
+// back to the tokens it was flattened from instead of deleting it outright
+// — those tiles were never actually freed while it sat collapsed, so
+// there's nothing extra to restore, just the expanded view to keep editing.
 export function backspace(state: GameState): GameState {
   if (state.status === 'locked' || state.tokens.length === 0) return state
   const last = state.tokens[state.tokens.length - 1]
+  if (last.type === 'number' && last.collapsedFrom) {
+    return { ...state, tokens: [...state.tokens.slice(0, -1), ...last.collapsedFrom] }
+  }
   const tokens = state.tokens.slice(0, -1)
-  if (last.type === 'number') {
+  if (last.type === 'number' && last.tileId !== null) {
     const tiles = state.tiles.map(t => (t.id === last.tileId ? { ...t, used: false } : t))
     return { ...state, tiles, tokens }
   }
   return { ...state, tokens }
+}
+
+// Flattens the whole expression typed so far into a single value — e.g.
+// "25 × 10" becomes one "250" you can keep building on with more operators
+// or brackets, the same way the old tile-merge game let you combine two
+// numbers and carry on with the result. Doesn't require using every token;
+// just needs what's typed so far to already be a complete, valid
+// expression (same gate as lockIn), with more than one token to flatten.
+export function canPressEquals(state: GameState): boolean {
+  if (state.status === 'locked') return false
+  if (state.tokens.length <= 1) return false
+  return evaluateExpression(state.tokens) !== null
+}
+
+// No auto-lock check needed here: by the time canPressEquals is true,
+// these tokens are already a complete expression, and completeness is only
+// ever newly reached via pressNumber or pressCloseBracket — both of which
+// already run checkAutoLock at that exact moment. So if this value matched
+// the target, the game would already be locked and canPressEquals would be
+// false; collapsing can never be what discovers a fresh target match.
+export function pressEquals(state: GameState): GameState {
+  if (!canPressEquals(state)) return state
+  const value = evaluateExpression(state.tokens)!
+  const collapsed: ExpressionToken = { type: 'number', tileId: null, value, collapsedFrom: state.tokens }
+  return { ...state, tokens: [collapsed] }
 }
 
 // A player can lock in any complete expression at any time as their final
@@ -320,8 +352,17 @@ export function scoreForValue(target: number, value: number | null): number {
   return 0
 }
 
-// One "step" per operation performed — matches how many operators appear in
-// the final expression, which is what a player actually did to get there.
+// One "step" per operation performed. Counts operator tokens recursively
+// through any collapsed values (see pressEquals) so flattening an
+// expression along the way doesn't hide the real number of operations from
+// the count.
 export function stepCount(state: GameState): number {
-  return state.tokens.filter(token => token.type === 'operator').length
+  function countOperators(tokens: ExpressionToken[]): number {
+    return tokens.reduce((sum, token) => {
+      if (token.type === 'operator') return sum + 1
+      if (token.type === 'number' && token.collapsedFrom) return sum + countOperators(token.collapsedFrom)
+      return sum
+    }, 0)
+  }
+  return countOperators(state.tokens)
 }

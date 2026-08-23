@@ -20,8 +20,13 @@ export interface Tile {
 
 export interface NumberToken {
   type: 'number'
-  tileId: number
+  // null for a value produced by collapsing a sub-expression via "=" —
+  // it isn't tied to any single original tile.
+  tileId: number | null
   value: number
+  // Present only on a collapsed value: the tokens it was flattened from,
+  // so backspacing it can restore them instead of losing them outright.
+  collapsedFrom?: ExpressionToken[]
 }
 
 export interface OperatorToken {

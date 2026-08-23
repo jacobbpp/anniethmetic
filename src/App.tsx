@@ -17,6 +17,7 @@ import {
   expireClock,
   lockIn,
   pressCloseBracket,
+  pressEquals,
   pressNumber,
   pressOpenBracket,
   pressOperator,
@@ -259,6 +260,7 @@ export function App() {
             onPressOperator={(op: Operator) => activeSetState(pressOperator(activeState, op))}
             onPressOpenBracket={() => activeSetState(pressOpenBracket(activeState))}
             onPressCloseBracket={() => activeSetState(pressCloseBracket(activeState))}
+            onPressEquals={() => activeSetState(pressEquals(activeState))}
             onBackspace={() => activeSetState(backspace(activeState))}
             onLockIn={() => activeSetState(lockIn(activeState))}
             onExpireClock={() => activeSetState(expireClock(activeState))}

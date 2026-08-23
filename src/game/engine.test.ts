@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   backspace,
   canPressCloseBracket,
+  canPressEquals,
   canPressNumber,
   canPressOpenBracket,
   canPressOperator,
@@ -13,6 +14,7 @@ import {
   isCompleteExpression,
   lockIn,
   pressCloseBracket,
+  pressEquals,
   pressNumber,
   pressOpenBracket,
   pressOperator,
@@ -41,11 +43,12 @@ function tileId(state: GameState, value: number): number {
 // Presses a sequence of tokens by value/operator. Numbers are matched by
 // value against still-unused tiles (fine for these tests since no fixture
 // repeats a value across un-used tiles at the point it's pressed).
-function type(state: GameState, ...actions: (number | Operator | '(' | ')')[]): GameState {
+function type(state: GameState, ...actions: (number | Operator | '(' | ')' | '=')[]): GameState {
   let next = state
   for (const action of actions) {
     if (action === '(') next = pressOpenBracket(next)
     else if (action === ')') next = pressCloseBracket(next)
+    else if (action === '=') next = pressEquals(next)
     else if (typeof action === 'number') next = pressNumber(next, tileId(next, action))
     else next = pressOperator(next, action)
   }
@@ -297,6 +300,99 @@ describe('backspace', () => {
   })
 })
 
+describe('pressEquals: collapsing a sub-expression into one value', () => {
+  it('flattens a complete expression into a single number token', () => {
+    const state = type(withTiles([25, 10, 6], { target: 500 }), 25, '×', 10, '=')
+    expect(state.tokens).toEqual([{ type: 'number', tileId: null, value: 250, collapsedFrom: expect.any(Array) }])
+  })
+
+  it('lets you keep building on the collapsed value with more operators', () => {
+    const state = type(withTiles([25, 10, 6], { target: 256 }), 25, '×', 10, '=', '+', 6)
+    expect(evaluateExpression(state.tokens)).toBe(256)
+    const locked = lockIn(state)
+    expect(locked.finalValue).toBe(256)
+  })
+
+  it('is disabled and a no-op with zero or one tokens', () => {
+    const empty = withTiles([25, 10])
+    expect(canPressEquals(empty)).toBe(false)
+    expect(pressEquals(empty)).toBe(empty)
+
+    const single = type(withTiles([25, 10]), 25)
+    expect(canPressEquals(single)).toBe(false)
+    expect(pressEquals(single)).toBe(single)
+  })
+
+  it('is disabled and a no-op when the expression is incomplete', () => {
+    const state = type(withTiles([25, 10]), 25, '×')
+    expect(canPressEquals(state)).toBe(false)
+    expect(pressEquals(state)).toBe(state)
+  })
+
+  it('is disabled and a no-op once locked', () => {
+    const state = type(withTiles([100, 87], { target: 187 }), 100, '+', 87)
+    expect(canPressEquals(state)).toBe(false)
+    expect(pressEquals(state)).toBe(state)
+  })
+
+  it('never needs to auto-lock itself — a target-matching expression is already locked one press earlier', () => {
+    // 25 × 10 already equals target the instant the second operand lands
+    // (pressNumber's own auto-lock), before "=" could ever be pressed —
+    // canPressEquals is false by then, so pressEquals is a no-op.
+    const state = type(withTiles([25, 10, 6], { target: 250 }), 25, '×', 10)
+    expect(state.status).toBe('locked')
+    expect(state.finalValue).toBe(250)
+    expect(canPressEquals(state)).toBe(false)
+    expect(pressEquals(state)).toBe(state)
+  })
+
+  it('keeps every tile marked used while collapsed, same as an uncollapsed expression', () => {
+    const state = type(withTiles([25, 10, 6], { target: 500 }), 25, '×', 10, '=')
+    expect(state.tiles.find(t => t.value === 25)!.used).toBe(true)
+    expect(state.tiles.find(t => t.value === 10)!.used).toBe(true)
+    expect(state.tiles.find(t => t.value === 6)!.used).toBe(false)
+  })
+
+  it('backspacing a collapsed value un-collapses it back to its source tokens instead of deleting it', () => {
+    let state = type(withTiles([25, 10, 6], { target: 500 }), 25, '×', 10, '=')
+    state = backspace(state)
+    expect(state.tokens).toEqual([
+      { type: 'number', tileId: expect.any(Number), value: 25 },
+      { type: 'operator', op: '×' },
+      { type: 'number', tileId: expect.any(Number), value: 10 },
+    ])
+    // Tiles were never actually freed while collapsed, so nothing to restore there.
+    expect(state.tiles.find(t => t.value === 25)!.used).toBe(true)
+    expect(state.tiles.find(t => t.value === 10)!.used).toBe(true)
+    // And normal backspacing continues to work from the expanded view.
+    state = backspace(state)
+    expect(state.tokens).toHaveLength(2)
+    expect(state.tiles.find(t => t.value === 10)!.used).toBe(false)
+  })
+
+  it('supports nested collapses, un-collapsing one layer at a time without changing the value', () => {
+    let state = type(withTiles([25, 10, 6], { target: 500 }), 25, '×', 10, '=', '+', 6, '=')
+    expect(evaluateExpression(state.tokens)).toBe(256)
+    expect(state.tokens).toHaveLength(1)
+
+    state = backspace(state) // un-collapses the outer "=", revealing [250 (still collapsed), +, 6]
+    expect(evaluateExpression(state.tokens)).toBe(256)
+    expect(state.tokens).toHaveLength(3)
+
+    state = backspace(state) // removes the trailing "6"
+    state = backspace(state) // removes the trailing "+"
+    expect(state.tokens).toHaveLength(1)
+    expect(evaluateExpression(state.tokens)).toBe(250)
+
+    state = backspace(state) // now un-collapses the inner "25 × 10"
+    expect(state.tokens).toEqual([
+      { type: 'number', tileId: expect.any(Number), value: 25 },
+      { type: 'operator', op: '×' },
+      { type: 'number', tileId: expect.any(Number), value: 10 },
+    ])
+  })
+})
+
 describe('lockIn', () => {
   it('locks in a single original tile with no operations at all', () => {
     const state = type(withTiles([3, 4, 5], { target: 500 }), 4)
@@ -377,6 +473,14 @@ describe('stepCount', () => {
 
   it('counts one operator per operation regardless of brackets', () => {
     const state = type(withTiles([70, 50, 20], { target: 100 }), 70, '+', '(', 50, '−', 20, ')')
+    expect(stepCount(state)).toBe(2)
+  })
+
+  it('still counts every operation performed through a collapsed value, not just what remains visible', () => {
+    // Fully collapsing "25 × 10 + 6" down to one token must not hide that
+    // two real operations (×, +) were performed.
+    const state = type(withTiles([25, 10, 6], { target: 500 }), 25, '×', 10, '=', '+', 6, '=')
+    expect(state.tokens).toHaveLength(1)
     expect(stepCount(state)).toBe(2)
   })
 })

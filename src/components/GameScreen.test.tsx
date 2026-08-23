@@ -27,6 +27,7 @@ function renderGameScreen(overrides: Partial<Parameters<typeof GameScreen>[0]> =
     onPressOperator: vi.fn(),
     onPressOpenBracket: vi.fn(),
     onPressCloseBracket: vi.fn(),
+    onPressEquals: vi.fn(),
     onBackspace: vi.fn(),
     onLockIn: vi.fn(),
     onExpireClock: vi.fn(),
@@ -131,6 +132,41 @@ describe('GameScreen: interaction wiring', () => {
     const { onPressCloseBracket } = renderGameScreen({ state })
     fireEvent.click(screen.getByRole('button', { name: 'Close bracket' }))
     expect(onPressCloseBracket).toHaveBeenCalledOnce()
+  })
+
+  it('disables the collapse button ("=") with only a single number typed', () => {
+    let state = baseState()
+    state = pressNumber(state, state.tiles[0].id)
+    renderGameScreen({ state })
+    expect(screen.getByRole('button', { name: 'Collapse to one number' })).toBeDisabled()
+  })
+
+  it('enables the collapse button ("=") once there is a complete multi-token expression', () => {
+    let state = baseState()
+    state = pressNumber(state, state.tiles[0].id)
+    state = pressOperator(state, '+')
+    state = pressNumber(state, state.tiles[1].id)
+    renderGameScreen({ state })
+    expect(screen.getByRole('button', { name: 'Collapse to one number' })).toBeEnabled()
+  })
+
+  it('calls onPressEquals once the collapse button is enabled', () => {
+    let state = baseState()
+    state = pressNumber(state, state.tiles[0].id)
+    state = pressOperator(state, '+')
+    state = pressNumber(state, state.tiles[1].id)
+    const { onPressEquals } = renderGameScreen({ state })
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse to one number' }))
+    expect(onPressEquals).toHaveBeenCalledOnce()
+  })
+
+  it('disables the collapse button ("=") in hard mode even with a complete expression, since collapsing would leak the computed value hard mode hides', () => {
+    let state = baseState()
+    state = pressNumber(state, state.tiles[0].id)
+    state = pressOperator(state, '+')
+    state = pressNumber(state, state.tiles[1].id)
+    renderGameScreen({ state, hardMode: true })
+    expect(screen.getByRole('button', { name: 'Collapse to one number' })).toBeDisabled()
   })
 })
 
