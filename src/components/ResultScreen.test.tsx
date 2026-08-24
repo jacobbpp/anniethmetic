@@ -164,3 +164,69 @@ describe('ResultScreen', () => {
     expect(onClose).toHaveBeenCalledOnce()
   })
 })
+
+describe('ResultScreen: daily solvability note', () => {
+  it('tells the player an exact hit was possible when they missed one, without revealing the solution', () => {
+    render(
+      <ResultScreen
+        mode="daily"
+        target={190}
+        finalValue={187}
+        score={7}
+        stepCount={3}
+        elapsedMs={42_000}
+        dateLabel="Aug 20"
+        wasSolvable={true}
+        onClose={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('There was an exact hit today. Worth a hunt next time.')).toBeInTheDocument()
+  })
+
+  it('tells the player no exact hit was possible when there truly was none', () => {
+    render(
+      <ResultScreen
+        mode="daily"
+        target={190}
+        finalValue={187}
+        score={7}
+        stepCount={3}
+        elapsedMs={42_000}
+        dateLabel="Aug 20"
+        wasSolvable={false}
+        onClose={vi.fn()}
+      />,
+    )
+
+    expect(
+      screen.getByText('No exact hit was possible today, so getting close was the best anyone could do.'),
+    ).toBeInTheDocument()
+  })
+
+  it('shows no solvability note at all when the player landed exactly on target, regardless of wasSolvable', () => {
+    render(
+      <ResultScreen
+        mode="daily"
+        target={190}
+        finalValue={190}
+        score={10}
+        stepCount={3}
+        elapsedMs={42_000}
+        dateLabel="Aug 20"
+        wasSolvable={true}
+        onClose={vi.fn()}
+      />,
+    )
+
+    expect(screen.queryByText(/exact hit/)).not.toBeInTheDocument()
+  })
+
+  it('shows no solvability note in free-play mode, since solvability is only computed for the daily puzzle', () => {
+    render(
+      <ResultScreen mode="free" target={190} finalValue={187} score={7} stepCount={3} elapsedMs={42_000} onClose={vi.fn()} />,
+    )
+
+    expect(screen.queryByText(/exact hit/)).not.toBeInTheDocument()
+  })
+})
