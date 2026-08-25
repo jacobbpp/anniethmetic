@@ -23,12 +23,18 @@ function shuffle<T>(items: T[], rng: () => number): T[] {
 // Draws 0–2 large numbers from {25,50,75,100} and fills the rest from two
 // of each 1–10. This distribution is tuned for solvability — widening it to
 // the full 0–4-large official range is a deliberate non-goal, not an
-// oversight.
-export function generateNumbers(rng: () => number = Math.random): number[] {
-  const largeCount = Math.floor(rng() * (MAX_LARGE_NUMBERS + 1))
-  const large = shuffle([...LARGE_NUMBERS], rng).slice(0, largeCount)
+// oversight. Pass a specific `largeCount` (clamped to 0..MAX_LARGE_NUMBERS)
+// to draw exactly that many instead of a random count, e.g. so a free-play
+// player can choose their own split before dealing, the same choice a real
+// Countdown contestant makes each round. Omit it (or pass null) for the
+// random draw — used as-is for the daily challenge, which must stay
+// unaffected by anyone's free-play preference.
+export function generateNumbers(rng: () => number = Math.random, largeCount?: number | null): number[] {
+  const count =
+    largeCount == null ? Math.floor(rng() * (MAX_LARGE_NUMBERS + 1)) : Math.max(0, Math.min(MAX_LARGE_NUMBERS, largeCount))
+  const large = shuffle([...LARGE_NUMBERS], rng).slice(0, count)
   const smallPool = [...SMALL_NUMBERS, ...SMALL_NUMBERS]
-  const small = shuffle(smallPool, rng).slice(0, TILE_COUNT - largeCount)
+  const small = shuffle(smallPool, rng).slice(0, TILE_COUNT - count)
   return [...large, ...small]
 }
 
@@ -36,8 +42,8 @@ export function generateTarget(rng: () => number = Math.random): number {
   return TARGET_MIN + Math.floor(rng() * (TARGET_MAX - TARGET_MIN + 1))
 }
 
-export function createInitialState(rng: () => number = Math.random): GameState {
-  const numbers = generateNumbers(rng)
+export function createInitialState(rng: () => number = Math.random, largeCount?: number | null): GameState {
+  const numbers = generateNumbers(rng, largeCount)
   const target = generateTarget(rng)
   const tiles: Tile[] = numbers.map((value, id) => ({ id, value, used: false }))
   return {

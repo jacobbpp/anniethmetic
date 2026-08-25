@@ -14,8 +14,10 @@ export function HowToPlayScreen({ onClose }: HowToPlayScreenProps) {
             <span className="howto-step__n">1</span>
             <h3 className="howto-step__title">Six numbers, one target</h3>
             <p className="howto-step__body">
-              You're dealt six numbers, a couple of big ones (25, 50, 75, 100) if you're lucky, the rest small
-              (1–10), and a three-digit target. Get as close as you can.
+              You're dealt six numbers and a three-digit target. Get as close as you can. In free play,
+              starting a new round asks how many big ones (25, 50, 75, 100) you want, 0 to 2, or leave it to
+              chance. The rest fill in small (1–10). The daily challenge is the same puzzle for everyone, so
+              its split isn't up to you.
             </p>
           </div>
           <div className="howto-step">

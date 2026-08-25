@@ -53,7 +53,9 @@ export interface UseCurrentGameResult {
   // Bumped on every restart — a stable per-game identity for things like
   // the optional classic clock, which needs to know when to rearm.
   gameId: number
-  restart: () => void
+  // largeCount: how many big numbers (25/50/75/100) to deal — omit/null
+  // for the usual random split.
+  restart: (largeCount?: number | null) => void
 }
 
 // Free play's own current game, persisted separately from the daily
@@ -72,11 +74,14 @@ export function useCurrentGame(): UseCurrentGameResult {
     writeHasRecorded(value)
   }, [])
 
-  const restart = useCallback(() => {
-    setState(createInitialState())
-    setHasRecorded(false)
-    setGameId(id => id + 1)
-  }, [setHasRecorded])
+  const restart = useCallback(
+    (largeCount?: number | null) => {
+      setState(createInitialState(undefined, largeCount))
+      setHasRecorded(false)
+      setGameId(id => id + 1)
+    },
+    [setHasRecorded],
+  )
 
   return { state, setState, hasRecorded, setHasRecorded, gameId, restart }
 }

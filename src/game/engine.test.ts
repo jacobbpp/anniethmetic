@@ -77,6 +77,26 @@ describe('generateNumbers', () => {
     numbers.forEach(n => counts.set(n, (counts.get(n) ?? 0) + 1))
     counts.forEach(count => expect(count).toBeLessThanOrEqual(2))
   })
+
+  it('draws exactly the requested number of large numbers when a largeCount is given', () => {
+    ;[0, 1, 2].forEach(largeCount => {
+      const numbers = generateNumbers(() => 0.5, largeCount)
+      const largeDrawn = numbers.filter(n => (LARGE_NUMBERS as readonly number[]).includes(n))
+      expect(largeDrawn).toHaveLength(largeCount)
+      expect(numbers).toHaveLength(TILE_COUNT)
+    })
+  })
+
+  it('clamps an out-of-range largeCount to 0..MAX_LARGE_NUMBERS', () => {
+    expect(generateNumbers(() => 0.5, -3).filter(n => (LARGE_NUMBERS as readonly number[]).includes(n))).toHaveLength(0)
+    expect(generateNumbers(() => 0.5, 99).filter(n => (LARGE_NUMBERS as readonly number[]).includes(n))).toHaveLength(2)
+  })
+
+  it('falls back to a random large count when largeCount is omitted or null', () => {
+    const omitted = generateNumbers(() => 0.99)
+    const nulled = generateNumbers(() => 0.99, null)
+    expect(omitted).toEqual(nulled)
+  })
 })
 
 describe('generateTarget', () => {
@@ -94,6 +114,12 @@ describe('createInitialState', () => {
     expect(state.finalValue).toBeNull()
     expect(state.tiles).toHaveLength(TILE_COUNT)
     expect(state.tiles.every(t => !t.used)).toBe(true)
+  })
+
+  it('deals exactly the requested number of large tiles when largeCount is given', () => {
+    const state = createInitialState(() => 0.5, 0)
+    const largeTiles = state.tiles.filter(t => (LARGE_NUMBERS as readonly number[]).includes(t.value))
+    expect(largeTiles).toHaveLength(0)
   })
 })
 

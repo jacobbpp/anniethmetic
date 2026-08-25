@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AchievementsScreen } from './components/AchievementsScreen.tsx'
 import { AchievementToast } from './components/AchievementToast.tsx'
+import { BigsPickerScreen } from './components/BigsPickerScreen.tsx'
 import { GameScreen } from './components/GameScreen.tsx'
 import { Header } from './components/Header.tsx'
 import { HomeScreen } from './components/HomeScreen.tsx'
@@ -83,6 +84,7 @@ export function App() {
   const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false)
   const [isAchievementsOpen, setIsAchievementsOpen] = useState(false)
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false)
+  const [isBigsPickerOpen, setIsBigsPickerOpen] = useState(false)
   const [returnTo, setReturnTo] = useState<ReturnTarget>('game')
   const [pendingLeaderboardEntry, setPendingLeaderboardEntry] = useState<PendingLeaderboardEntry | null>(null)
 
@@ -173,10 +175,23 @@ export function App() {
     else if (returnTo === 'settings') setIsSettingsOpen(true)
   }
 
+  // Starting a fresh round asks how many bigs to deal first (same choice a
+  // real Countdown contestant makes each round) — resuming an in-progress
+  // board just jumps back in, no picker needed.
   function startFreePlay() {
+    if (freePlay.state.status === 'locked') {
+      setIsBigsPickerOpen(true)
+      return
+    }
     closeAllScreens()
     setIsDailyOpen(false)
-    if (freePlay.state.status === 'locked') freePlay.restart()
+  }
+
+  function pickBigsAndStartFreePlay(largeCount: number | null) {
+    setIsBigsPickerOpen(false)
+    freePlay.restart(largeCount)
+    closeAllScreens()
+    setIsDailyOpen(false)
   }
 
   function startDaily() {
@@ -305,6 +320,10 @@ export function App() {
       )}
 
       {whatsNew.isOpen && <WhatsNewScreen entries={whatsNew.entries} onClose={whatsNew.close} />}
+
+      {isBigsPickerOpen && (
+        <BigsPickerScreen onPick={pickBigsAndStartFreePlay} onCancel={() => setIsBigsPickerOpen(false)} />
+      )}
     </div>
   )
 }

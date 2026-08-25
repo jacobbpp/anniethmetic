@@ -564,6 +564,30 @@ button:focus-visible {
   flex: 1;
 }
 
+/* ---------- bigs picker ---------- */
+
+.bigs-picker__options {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.bigs-picker__option {
+  flex: 1;
+  padding: 10px 0;
+}
+
+.bigs-picker__cancel {
+  background: none;
+  border: none;
+  text-align: center;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+  min-height: 36px;
+}
+
 /* ---------- what's new ---------- */
 
 .whats-new {
