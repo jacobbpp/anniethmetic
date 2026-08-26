@@ -64,81 +64,87 @@ export function GameScreen({
         </div>
       )}
 
-      <div className="game-target">
-        <span className="game-target__label">Target</span>
-        <div className="game-target__tile">{state.target}</div>
-      </div>
+      <div className="game-play-area">
+        <div className="game-target">
+          <span className="game-target__label">Target</span>
+          <div className="game-target__tile">{state.target}</div>
+        </div>
 
-      <div className="game-working">
-        <div className="game-working__value">
-          {hasStarted ? (
-            <span>{formatExpression(state.tokens)}</span>
-          ) : (
-            <span className="game-working__placeholder">tap a number to start</span>
+        <div className="game-working">
+          <div className="game-working__value">
+            {hasStarted ? (
+              <span>{formatExpression(state.tokens)}</span>
+            ) : (
+              <span className="game-working__placeholder">tap a number to start</span>
+            )}
+          </div>
+          {!hardMode && (
+            <div className="game-working__steps">{liveValue !== null ? `= ${liveValue}` : ' '}</div>
           )}
         </div>
-        {!hardMode && (
-          <div className="game-working__steps">{liveValue !== null ? `= ${liveValue}` : ' '}</div>
-        )}
-      </div>
 
-      <div className="game-ops">
-        {OPERATORS.map(op => (
-          <button
-            key={op}
-            type="button"
-            className="game-op"
-            disabled={locked || !canPressOperator(state, op)}
-            onClick={() => onPressOperator(op)}
-            aria-label={`Operator ${op}`}
-          >
-            {op}
-          </button>
-        ))}
-        <button
-          type="button"
-          className="game-op"
-          disabled={locked || !canPressOpenBracket(state)}
-          onClick={onPressOpenBracket}
-          aria-label="Open bracket"
-        >
-          (
-        </button>
-        <button
-          type="button"
-          className="game-op"
-          disabled={locked || !canPressCloseBracket(state)}
-          onClick={onPressCloseBracket}
-          aria-label="Close bracket"
-        >
-          )
-        </button>
-        <button
-          type="button"
-          className="game-op"
-          // Collapsing would show the computed value in the always-visible
-          // expression display, defeating hard mode's whole point — same
-          // reason the "= liveValue" hint line is hidden below.
-          disabled={locked || hardMode || !canPressEquals(state)}
-          onClick={onPressEquals}
-          aria-label="Collapse to one number"
-        >
-          =
-        </button>
-      </div>
+        <div className="game-ops">
+          <div className="game-ops__row">
+            {OPERATORS.map(op => (
+              <button
+                key={op}
+                type="button"
+                className="game-op"
+                disabled={locked || !canPressOperator(state, op)}
+                onClick={() => onPressOperator(op)}
+                aria-label={`Operator ${op}`}
+              >
+                {op}
+              </button>
+            ))}
+          </div>
+          <div className="game-ops__row">
+            <button
+              type="button"
+              className="game-op"
+              disabled={locked || !canPressOpenBracket(state)}
+              onClick={onPressOpenBracket}
+              aria-label="Open bracket"
+            >
+              (
+            </button>
+            <button
+              type="button"
+              className="game-op"
+              disabled={locked || !canPressCloseBracket(state)}
+              onClick={onPressCloseBracket}
+              aria-label="Close bracket"
+            >
+              )
+            </button>
+            <button
+              type="button"
+              className="game-op"
+              // Collapsing would show the computed value in the always-visible
+              // expression display, defeating hard mode's whole point — same
+              // reason the "= liveValue" hint line is hidden below.
+              disabled={locked || hardMode || !canPressEquals(state)}
+              onClick={onPressEquals}
+              aria-label="Collapse to one number"
+            >
+              =
+            </button>
+          </div>
+        </div>
 
-      <div className="game-numbers">
-        {state.tiles.map(tile => (
-          <button
-            key={tile.id}
-            type="button"
-            className="game-num"
-            disabled={locked || !canPressNumber(state, tile.id)}
-            onClick={() => onPressNumber(tile.id)}
-          >
-            {tile.value}
-          </button>
-        ))}
+        <div className="game-numbers">
+          {state.tiles.map(tile => (
+            <button
+              key={tile.id}
+              type="button"
+              className="game-num"
+              disabled={locked || !canPressNumber(state, tile.id)}
+              onClick={() => onPressNumber(tile.id)}
+            >
+              {tile.value}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="btn-row">
