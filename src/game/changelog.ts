@@ -8,6 +8,11 @@ export interface ChangelogEntry {
 // version.ts — bump both together when shipping a new entry.
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.10.0',
+    date: '2026-08-26',
+    highlights: ['A free play result now offers a Home button, not just Share and Play again'],
+  },
+  {
     version: '0.9.0',
     date: '2026-08-26',
     highlights: ['I hated the way the operators were displayed. Redesigned the look'],

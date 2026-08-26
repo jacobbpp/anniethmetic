@@ -96,9 +96,14 @@ export function ResultScreen({
         <div className="overlay__actions">
           <ShareButton text={shareText} />
           {mode === 'free' ? (
-            <button type="button" className="btn btn--primary" onClick={onPlayAgain}>
-              Play again
-            </button>
+            <>
+              <button type="button" className="btn btn--ghost" onClick={onClose}>
+                Home
+              </button>
+              <button type="button" className="btn btn--primary" onClick={onPlayAgain}>
+                Play again
+              </button>
+            </>
           ) : (
             <button type="button" className="btn btn--primary" onClick={onClose}>
               Done for today

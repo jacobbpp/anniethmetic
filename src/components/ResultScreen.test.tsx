@@ -128,6 +128,42 @@ describe('ResultScreen', () => {
     expect(onPlayAgain).toHaveBeenCalledOnce()
   })
 
+  it('shows a Home button in free mode that calls onClose when clicked', () => {
+    const onClose = vi.fn()
+    render(
+      <ResultScreen
+        mode="free"
+        target={190}
+        finalValue={190}
+        score={10}
+        stepCount={1}
+        elapsedMs={5_000}
+        onPlayAgain={vi.fn()}
+        onClose={onClose}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Home' }))
+    expect(onClose).toHaveBeenCalledOnce()
+  })
+
+  it('does not render a Home button in daily mode, since "Done for today" already closes it', () => {
+    render(
+      <ResultScreen
+        mode="daily"
+        target={190}
+        finalValue={190}
+        score={10}
+        stepCount={1}
+        elapsedMs={5_000}
+        dateLabel="Aug 20"
+        onClose={vi.fn()}
+      />,
+    )
+
+    expect(screen.queryByRole('button', { name: 'Home' })).not.toBeInTheDocument()
+  })
+
   it('does not render a Play again button in daily mode', () => {
     render(
       <ResultScreen
