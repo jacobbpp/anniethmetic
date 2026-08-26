@@ -83,48 +83,52 @@ export function GameScreen({
       </div>
 
       <div className="game-ops">
-        {OPERATORS.map(op => (
+        <div className="game-ops__toolbar">
+          {OPERATORS.map(op => (
+            <button
+              key={op}
+              type="button"
+              className="game-op"
+              disabled={locked || !canPressOperator(state, op)}
+              onClick={() => onPressOperator(op)}
+              aria-label={`Operator ${op}`}
+            >
+              {op}
+            </button>
+          ))}
+        </div>
+        <div className="game-ops__toolbar game-ops__toolbar--muted">
           <button
-            key={op}
             type="button"
             className="game-op"
-            disabled={locked || !canPressOperator(state, op)}
-            onClick={() => onPressOperator(op)}
-            aria-label={`Operator ${op}`}
+            disabled={locked || !canPressOpenBracket(state)}
+            onClick={onPressOpenBracket}
+            aria-label="Open bracket"
           >
-            {op}
+            (
           </button>
-        ))}
-        <button
-          type="button"
-          className="game-op"
-          disabled={locked || !canPressOpenBracket(state)}
-          onClick={onPressOpenBracket}
-          aria-label="Open bracket"
-        >
-          (
-        </button>
-        <button
-          type="button"
-          className="game-op"
-          disabled={locked || !canPressCloseBracket(state)}
-          onClick={onPressCloseBracket}
-          aria-label="Close bracket"
-        >
-          )
-        </button>
-        <button
-          type="button"
-          className="game-op"
-          // Collapsing would show the computed value in the always-visible
-          // expression display, defeating hard mode's whole point — same
-          // reason the "= liveValue" hint line is hidden below.
-          disabled={locked || hardMode || !canPressEquals(state)}
-          onClick={onPressEquals}
-          aria-label="Collapse to one number"
-        >
-          =
-        </button>
+          <button
+            type="button"
+            className="game-op"
+            disabled={locked || !canPressCloseBracket(state)}
+            onClick={onPressCloseBracket}
+            aria-label="Close bracket"
+          >
+            )
+          </button>
+          <button
+            type="button"
+            className="game-op game-op--eq"
+            // Collapsing would show the computed value in the always-visible
+            // expression display, defeating hard mode's whole point — same
+            // reason the "= liveValue" hint line is hidden below.
+            disabled={locked || hardMode || !canPressEquals(state)}
+            onClick={onPressEquals}
+            aria-label="Collapse to one number"
+          >
+            =
+          </button>
+        </div>
       </div>
 
       <div className="game-numbers">
