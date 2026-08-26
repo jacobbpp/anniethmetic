@@ -8,6 +8,13 @@ export interface ChangelogEntry {
 // version.ts — bump both together when shipping a new entry.
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.8.0',
+    date: '2026-08-26',
+    highlights: [
+      'On the daily challenge, tap "See working out" after locking in to reveal your own equation again',
+    ],
+  },
+  {
     version: '0.7.0',
     date: '2026-08-25',
     highlights: [

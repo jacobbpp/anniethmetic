@@ -13,6 +13,7 @@ import { SettingsScreen } from './components/SettingsScreen.tsx'
 import { StatsScreen } from './components/StatsScreen.tsx'
 import { WhatsNewScreen } from './components/WhatsNewScreen.tsx'
 import { bestSolveTimeMs, formatDateLabel, getLocalDateString } from './game/daily.ts'
+import { formatExpression } from './game/share.ts'
 import {
   backspace,
   expireClock,
@@ -291,6 +292,7 @@ export function App() {
               dateLabel={isDailyOpen ? formatDateLabel(today) : undefined}
               dailyStreakCount={isDailyOpen ? dailyChallenge.streak.count : undefined}
               wasSolvable={isDailyOpen ? dailyChallenge.todayResult?.wasSolvable : undefined}
+              equation={isDailyOpen ? formatExpression(daily.state.tokens) : undefined}
               onPlayAgain={isDailyOpen ? undefined : startFreePlay}
               onClose={openHome}
             />

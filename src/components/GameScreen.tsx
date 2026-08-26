@@ -6,8 +6,8 @@ import {
   canPressOperator,
   evaluateExpression,
 } from '../game/engine.ts'
-import { formatElapsedTime } from '../game/share.ts'
-import type { ExpressionToken, GameState, Operator } from '../game/types.ts'
+import { formatElapsedTime, formatExpression } from '../game/share.ts'
+import type { GameState, Operator } from '../game/types.ts'
 import { useCountdown } from '../hooks/useCountdown.ts'
 
 const OPERATORS: Operator[] = ['+', '−', '×', '÷']
@@ -27,30 +27,6 @@ interface GameScreenProps {
   onBackspace: () => void
   onLockIn: () => void
   onExpireClock: () => void
-}
-
-function formatToken(token: ExpressionToken): string {
-  if (token.type === 'number') return String(token.value)
-  if (token.type === 'operator') return token.op
-  if (token.type === 'open') return '('
-  return ')'
-}
-
-// Spaces sit around operators and between adjacent numbers/brackets, but
-// hug the inside of a bracket pair — "(5 + 3) × 2", not "( 5 + 3 ) × 2".
-function formatExpression(tokens: ExpressionToken[]): string {
-  let result = ''
-  tokens.forEach((token, index) => {
-    const str = formatToken(token)
-    if (index === 0) {
-      result += str
-      return
-    }
-    const prev = tokens[index - 1]
-    const needsSpace = prev.type !== 'open' && token.type !== 'close'
-    result += (needsSpace ? ' ' : '') + str
-  })
-  return result
 }
 
 export function GameScreen({

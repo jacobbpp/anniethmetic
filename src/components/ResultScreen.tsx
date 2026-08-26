@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { bandEmojiForScore, buildDailyShareText, buildShareText, buildStreakShareText, formatElapsedTime } from '../game/share.ts'
 import { ShareButton } from './ShareButton.tsx'
 
@@ -11,6 +12,7 @@ export interface ResultScreenProps {
   dateLabel?: string // only present for mode === 'daily', e.g. "Aug 20"
   dailyStreakCount?: number // only present for mode === 'daily'
   wasSolvable?: boolean // only present for mode === 'daily' — whether an exact hit existed at all
+  equation?: string // only present for mode === 'daily' — the player's own formatted equation, hidden until asked for
   onPlayAgain?: () => void // only present for mode === 'free' — starts a fresh free-play puzzle
   onClose: () => void // dismiss the overlay in either mode
 }
@@ -50,9 +52,11 @@ export function ResultScreen({
   dateLabel,
   dailyStreakCount,
   wasSolvable,
+  equation,
   onPlayAgain,
   onClose,
 }: ResultScreenProps) {
+  const [showWorkingOut, setShowWorkingOut] = useState(false)
   const band = bandForScore(score)
   const emojiRow = bandEmojiForScore(score).repeat(Math.max(stepCount, 1))
   const shareText =
@@ -76,6 +80,18 @@ export function ResultScreen({
         )}
         {mode === 'daily' && typeof dailyStreakCount === 'number' && dailyStreakCount > 0 && (
           <span className="pill pill--win">{buildStreakShareText(dailyStreakCount)}</span>
+        )}
+        {mode === 'daily' && equation && (
+          <>
+            <button
+              type="button"
+              className="result-working-toggle"
+              onClick={() => setShowWorkingOut(shown => !shown)}
+            >
+              {showWorkingOut ? 'Hide working out' : 'See working out'}
+            </button>
+            {showWorkingOut && <p className="result-working-toggle__equation">{equation}</p>}
+          </>
         )}
         <div className="overlay__actions">
           <ShareButton text={shareText} />

@@ -5,7 +5,9 @@ import {
   buildShareText,
   buildStreakShareText,
   formatElapsedTime,
+  formatExpression,
 } from './share.ts'
+import type { ExpressionToken } from './types.ts'
 
 describe('formatElapsedTime', () => {
   it('renders under a minute as 0:ss with a zero-padded seconds field', () => {
@@ -102,5 +104,37 @@ describe('buildDailyShareText', () => {
 describe('buildStreakShareText', () => {
   it('includes the streak count', () => {
     expect(buildStreakShareText(7)).toBe('🔥 7 day streak on Anniethmetic Daily!')
+  })
+})
+
+describe('formatExpression', () => {
+  function num(value: number): ExpressionToken {
+    return { type: 'number', tileId: value, value }
+  }
+  function op(o: '+' | '−' | '×' | '÷'): ExpressionToken {
+    return { type: 'operator', op: o }
+  }
+  const open: ExpressionToken = { type: 'open' }
+  const close: ExpressionToken = { type: 'close' }
+
+  it('renders an empty token list as an empty string', () => {
+    expect(formatExpression([])).toBe('')
+  })
+
+  it('renders a single number with no surrounding spaces', () => {
+    expect(formatExpression([num(7)])).toBe('7')
+  })
+
+  it('spaces operators and adjacent numbers', () => {
+    expect(formatExpression([num(5), op('+'), num(3)])).toBe('5 + 3')
+  })
+
+  it('hugs the inside of a bracket pair while still spacing outside it', () => {
+    expect(formatExpression([num(2), op('×'), open, num(5), op('+'), num(3), close])).toBe('2 × (5 + 3)')
+  })
+
+  it('renders a collapsed value the same as any other number, ignoring collapsedFrom', () => {
+    const collapsed: ExpressionToken = { type: 'number', tileId: null, value: 250, collapsedFrom: [num(25), op('×'), num(10)] }
+    expect(formatExpression([collapsed, op('+'), num(6)])).toBe('250 + 6')
   })
 })

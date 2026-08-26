@@ -549,6 +549,26 @@ button:focus-visible {
   gap: 8px;
 }
 
+.result-working-toggle {
+  background: none;
+  border: none;
+  text-align: center;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+  min-height: 32px;
+}
+
+.result-working-toggle__equation {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  word-break: break-word;
+}
+
 .overlay__actions {
   display: flex;
   gap: 8px;

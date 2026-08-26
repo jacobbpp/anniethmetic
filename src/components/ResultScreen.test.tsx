@@ -230,3 +230,80 @@ describe('ResultScreen: daily solvability note', () => {
     expect(screen.queryByText(/exact hit/)).not.toBeInTheDocument()
   })
 })
+
+describe('ResultScreen: working out toggle', () => {
+  it('hides the equation until the player asks to see it, then reveals it on tap', () => {
+    render(
+      <ResultScreen
+        mode="daily"
+        target={190}
+        finalValue={187}
+        score={7}
+        stepCount={2}
+        elapsedMs={42_000}
+        dateLabel="Aug 20"
+        equation="100 + 87"
+        onClose={vi.fn()}
+      />,
+    )
+
+    expect(screen.queryByText('100 + 87')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'See working out' }))
+    expect(screen.getByText('100 + 87')).toBeInTheDocument()
+  })
+
+  it('hides the equation again when toggled a second time', () => {
+    render(
+      <ResultScreen
+        mode="daily"
+        target={190}
+        finalValue={187}
+        score={7}
+        stepCount={2}
+        elapsedMs={42_000}
+        dateLabel="Aug 20"
+        equation="100 + 87"
+        onClose={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'See working out' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Hide working out' }))
+    expect(screen.queryByText('100 + 87')).not.toBeInTheDocument()
+  })
+
+  it('shows no working-out toggle at all when there is no equation to show', () => {
+    render(
+      <ResultScreen
+        mode="daily"
+        target={190}
+        finalValue={null}
+        score={0}
+        stepCount={0}
+        elapsedMs={42_000}
+        dateLabel="Aug 20"
+        equation=""
+        onClose={vi.fn()}
+      />,
+    )
+
+    expect(screen.queryByRole('button', { name: 'See working out' })).not.toBeInTheDocument()
+  })
+
+  it('shows no working-out toggle in free-play mode, even if an equation were passed', () => {
+    render(
+      <ResultScreen
+        mode="free"
+        target={190}
+        finalValue={187}
+        score={7}
+        stepCount={2}
+        elapsedMs={42_000}
+        equation="100 + 87"
+        onClose={vi.fn()}
+      />,
+    )
+
+    expect(screen.queryByRole('button', { name: 'See working out' })).not.toBeInTheDocument()
+  })
+})

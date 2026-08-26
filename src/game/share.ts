@@ -2,6 +2,8 @@
 // code here — that lives in the ShareButton component, which is the only
 // place allowed to touch browser delivery mechanisms.
 
+import type { ExpressionToken } from './types.ts'
+
 export interface ShareParams {
   target: number
   finalValue: number | null
@@ -53,4 +55,28 @@ export function buildDailyShareText(params: ShareParams & { dateLabel: string })
 
 export function buildStreakShareText(streakCount: number): string {
   return `🔥 ${streakCount} day streak on Anniethmetic Daily!`
+}
+
+function formatToken(token: ExpressionToken): string {
+  if (token.type === 'number') return String(token.value)
+  if (token.type === 'operator') return token.op
+  if (token.type === 'open') return '('
+  return ')'
+}
+
+// Spaces sit around operators and between adjacent numbers/brackets, but
+// hug the inside of a bracket pair — "(5 + 3) × 2", not "( 5 + 3 ) × 2".
+export function formatExpression(tokens: ExpressionToken[]): string {
+  let result = ''
+  tokens.forEach((token, index) => {
+    const str = formatToken(token)
+    if (index === 0) {
+      result += str
+      return
+    }
+    const prev = tokens[index - 1]
+    const needsSpace = prev.type !== 'open' && token.type !== 'close'
+    result += (needsSpace ? ' ' : '') + str
+  })
+  return result
 }

@@ -69,7 +69,8 @@ export function HowToPlayScreen({ onClose }: HowToPlayScreenProps) {
             <h3 className="howto-step__title">One a day</h3>
             <p className="howto-step__body">
               Everyone gets the same six numbers and the same target each day. Score comes first for ranking,
-              time only breaks a tie. Getting closer always matters more than getting there fast.
+              time only breaks a tie. Getting closer always matters more than getting there fast. Once you've
+              locked in, "See working out" reveals your own equation again if you want a look back.
             </p>
           </div>
         </div>
