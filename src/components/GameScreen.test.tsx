@@ -29,6 +29,7 @@ function renderGameScreen(overrides: Partial<Parameters<typeof GameScreen>[0]> =
     onPressCloseBracket: vi.fn(),
     onPressEquals: vi.fn(),
     onBackspace: vi.fn(),
+    onClearAll: vi.fn(),
     onLockIn: vi.fn(),
     onExpireClock: vi.fn(),
     ...overrides,
@@ -64,9 +65,10 @@ describe('GameScreen: rendering', () => {
     })
   })
 
-  it('disables Backspace and Lock in answer before anything is typed', () => {
+  it('disables Backspace, Clear, and Lock in answer before anything is typed', () => {
     renderGameScreen()
     expect(screen.getByRole('button', { name: 'Backspace' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Clear' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Lock in answer' })).toBeDisabled()
   })
 })
@@ -106,12 +108,14 @@ describe('GameScreen: interaction wiring', () => {
     expect(numberButtons(container)[1]).toBeEnabled()
   })
 
-  it('calls onBackspace and onLockIn from their buttons once enabled', () => {
+  it('calls onBackspace, onClearAll, and onLockIn from their buttons once enabled', () => {
     let state = baseState()
     state = pressNumber(state, state.tiles[0].id)
-    const { onBackspace, onLockIn } = renderGameScreen({ state })
+    const { onBackspace, onClearAll, onLockIn } = renderGameScreen({ state })
     fireEvent.click(screen.getByRole('button', { name: 'Backspace' }))
     expect(onBackspace).toHaveBeenCalledOnce()
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }))
+    expect(onClearAll).toHaveBeenCalledOnce()
     fireEvent.click(screen.getByRole('button', { name: 'Lock in answer' }))
     expect(onLockIn).toHaveBeenCalledOnce()
   })

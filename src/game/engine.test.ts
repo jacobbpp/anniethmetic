@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
   backspace,
+  canClearExpression,
   canPressCloseBracket,
   canPressEquals,
   canPressNumber,
   canPressOpenBracket,
   canPressOperator,
+  clearExpression,
   createInitialState,
   evaluateExpression,
   expireClock,
@@ -323,6 +325,41 @@ describe('backspace', () => {
   it('is a no-op once locked', () => {
     const state = type(withTiles([100, 87], { target: 187 }), 100, '+', 87)
     expect(backspace(state)).toBe(state)
+  })
+})
+
+describe('clearExpression', () => {
+  it('wipes every typed token and frees every tile in one go', () => {
+    let state = type(withTiles([3, 4, 5]), 3, '+', 4)
+    state = clearExpression(state)
+    expect(state.tokens).toEqual([])
+    expect(state.tiles.every(t => !t.used)).toBe(true)
+  })
+
+  it('leaves the target and tile values untouched', () => {
+    let state = type(withTiles([3, 4, 5], { target: 500 }), 3, '+', 4)
+    state = clearExpression(state)
+    expect(state.target).toBe(500)
+    expect(state.tiles.map(t => t.value)).toEqual([3, 4, 5])
+  })
+
+  it('frees tiles hidden inside a collapsed value too', () => {
+    let state = type(withTiles([25, 10, 6], { target: 500 }), 25, '×', 10, '=')
+    state = clearExpression(state)
+    expect(state.tokens).toEqual([])
+    expect(state.tiles.every(t => !t.used)).toBe(true)
+  })
+
+  it('is a no-op on an empty expression', () => {
+    const state = withTiles([3, 4])
+    expect(canClearExpression(state)).toBe(false)
+    expect(clearExpression(state)).toBe(state)
+  })
+
+  it('is a no-op once locked', () => {
+    const state = type(withTiles([100, 87], { target: 187 }), 100, '+', 87)
+    expect(canClearExpression(state)).toBe(false)
+    expect(clearExpression(state)).toBe(state)
   })
 })
 

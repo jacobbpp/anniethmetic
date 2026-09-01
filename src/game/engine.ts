@@ -304,6 +304,19 @@ export function backspace(state: GameState): GameState {
   return { ...state, tokens }
 }
 
+// Wipes the whole typed-so-far expression in one go and frees every tile,
+// rather than backspacing one token at a time. The tiles and target stay
+// exactly as dealt — this only resets what's been typed this attempt.
+export function canClearExpression(state: GameState): boolean {
+  return state.status !== 'locked' && state.tokens.length > 0
+}
+
+export function clearExpression(state: GameState): GameState {
+  if (!canClearExpression(state)) return state
+  const tiles = state.tiles.map(t => ({ ...t, used: false }))
+  return { ...state, tiles, tokens: [] }
+}
+
 // Flattens the whole expression typed so far into a single value — e.g.
 // "25 × 10" becomes one "250" you can keep building on with more operators
 // or brackets, the same way the old tile-merge game let you combine two

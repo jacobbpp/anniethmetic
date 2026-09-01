@@ -1,4 +1,5 @@
 import {
+  canClearExpression,
   canPressCloseBracket,
   canPressEquals,
   canPressNumber,
@@ -25,6 +26,7 @@ interface GameScreenProps {
   onPressCloseBracket: () => void
   onPressEquals: () => void
   onBackspace: () => void
+  onClearAll: () => void
   onLockIn: () => void
   onExpireClock: () => void
 }
@@ -41,6 +43,7 @@ export function GameScreen({
   onPressCloseBracket,
   onPressEquals,
   onBackspace,
+  onClearAll,
   onLockIn,
   onExpireClock,
 }: GameScreenProps) {
@@ -148,6 +151,9 @@ export function GameScreen({
       <div className="btn-row">
         <button type="button" className="btn btn--ghost" onClick={onBackspace} disabled={locked || state.tokens.length === 0}>
           Backspace
+        </button>
+        <button type="button" className="btn btn--ghost" onClick={onClearAll} disabled={!canClearExpression(state)}>
+          Clear
         </button>
         <button type="button" className="btn btn--cta" onClick={onLockIn} disabled={locked || liveValue === null}>
           Lock in answer

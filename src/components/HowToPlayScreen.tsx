@@ -54,6 +54,8 @@ export function HowToPlayScreen({ onClose }: HowToPlayScreenProps) {
             <p className="howto-step__body">
               Land on the target exactly and you lock in automatically. Nothing left to decide. Otherwise, lock
               in your equation at any time as your answer, even a single number with no operations at all.
+              Backspace undoes one step at a time; Clear wipes the whole equation and starts that attempt
+              over, without touching your target or numbers.
             </p>
           </div>
           <div className="howto-step">

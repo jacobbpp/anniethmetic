@@ -16,6 +16,7 @@ import { bestSolveTimeMs, formatDateLabel, getLocalDateString } from './game/dai
 import { formatExpression } from './game/share.ts'
 import {
   backspace,
+  clearExpression,
   expireClock,
   lockIn,
   pressCloseBracket,
@@ -278,6 +279,7 @@ export function App() {
             onPressCloseBracket={() => activeSetState(pressCloseBracket(activeState))}
             onPressEquals={() => activeSetState(pressEquals(activeState))}
             onBackspace={() => activeSetState(backspace(activeState))}
+            onClearAll={() => activeSetState(clearExpression(activeState))}
             onLockIn={() => activeSetState(lockIn(activeState))}
             onExpireClock={() => activeSetState(expireClock(activeState))}
           />

@@ -299,6 +299,10 @@ button:focus-visible {
   flex: 1;
 }
 
+.btn-row .btn--cta {
+  flex: 2;
+}
+
 /* ---------- game screen ---------- */
 
 .game-screen {
